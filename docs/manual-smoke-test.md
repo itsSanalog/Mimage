@@ -6,13 +6,13 @@ This is the lightweight browser checklist for ImageMasker after major feature or
 
 Serve the repository over HTTP:
 
-```powershell
-python -m http.server 8000
+```node
+npx serve
 ```
 
 Open:
 
-- `http://localhost:8000/`
+- `http://localhost:3000/`
 
 Keep DevTools open and watch the Console for errors.
 
