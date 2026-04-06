@@ -8,6 +8,7 @@ import { LayerManager } from './core/LayerManager.js';
 import { ViewportController } from './core/ViewportController.js';
 import { ExportManager } from './export/ExportManager.js';
 import { AiImageEditor } from './integrations/AiImageEditor.js';
+import { BackgroundRemover } from './integrations/BackgroundRemover.js';
 import { ImgurUploader } from './integrations/ImgurUploader.js';
 import { MaskEffects } from './masks/MaskEffects.js';
 import { MaskManager } from './masks/MaskManager.js';
@@ -21,6 +22,9 @@ import { BrushTool } from './tools/BrushTool.js';
 import { EraserTool } from './tools/EraserTool.js';
 import { RectTool } from './tools/RectTool.js';
 import { RegionEffectTool } from './tools/RegionEffectTool.js';
+import { PaintEffectManager } from './tools/PaintEffectManager.js';
+import { PaintEffectBrushTool } from './tools/PaintEffectBrushTool.js';
+import { CropTool } from './tools/CropTool.js';
 import { SelectTool } from './tools/SelectTool.js';
 import { TextTool } from './tools/TextTool.js';
 import { ToolManager } from './tools/ToolManager.js';
@@ -31,12 +35,14 @@ import {
 } from './tools/regionDefinitions.js';
 import { KeyboardShortcuts } from './ui/KeyboardShortcuts.js';
 import { AiEditPanel } from './ui/AiEditPanel.js';
+import { BackgroundRemovalPanel } from './ui/BackgroundRemovalPanel.js';
 import { CanvasArea } from './ui/CanvasArea.js';
 import { LayerPanel } from './ui/LayerPanel.js';
 import { MaskPanel } from './ui/MaskPanel.js';
 import { SavedRoundsPanel } from './ui/SavedRoundsPanel.js';
 import { SessionPanel } from './ui/SessionPanel.js';
 import { SettingsModal } from './ui/SettingsModal.js';
+import { ShortcutsPanel } from './ui/ShortcutsPanel.js';
 import { ThemeManager } from './ui/ThemeManager.js';
 import { ThemePanel } from './ui/ThemePanel.js';
 import { ToastManager } from './ui/ToastManager.js';
@@ -69,6 +75,7 @@ export class App {
     this.viewportController = null;
     this.exportManager = null;
     this.aiImageEditor = null;
+    this.backgroundRemover = null;
     this.toolManager = null;
     this.keyboardShortcuts = null;
     this.imgurUploader = null;
@@ -78,18 +85,24 @@ export class App {
     this.maskEffects = null;
     this.brushTool = null;
     this.eraserTool = null;
+    this.blurPaintTool = null;
+    this.pixelatePaintTool = null;
     this.rectTool = null;
     this.regionEffectTool = null;
+    this.paintEffectManager = null;
+    this.cropTool = null;
     this.textTool = null;
     this.selectTool = null;
     this.toolbar = null;
     this.maskPanel = null;
     this.aiEditPanel = null;
+    this.backgroundRemovalPanel = null;
     this.layerPanel = null;
     this.canvasArea = null;
     this.sessionPanel = null;
     this.savedRoundsPanel = null;
     this.themePanel = null;
+    this.shortcutsPanel = null;
     this.settingsModal = null;
     this.toastManager = null;
     this.appShell = null;
@@ -104,8 +117,10 @@ export class App {
     this.isRestoringSession = false;
     this.regionCreationSeed = Math.random();
     this.aiEditCount = 0;
+    this.backgroundRemovalCount = 0;
     this.aiEditModels = [];
     this.expandedLayerSettings = new Set();
+    this.selectedPanelLayerId = null;
     this.uiStateController = null;
     this.savedRoundsController = null;
     this.sessionController = null;
@@ -117,6 +132,8 @@ export class App {
     }
 
     this.render();
+    this.toolbar.refs.paintEffectAmountField.hidden = true;
+    this.toolbar.refs.cropActionRow.hidden = true;
     this.risChecker = new RISChecker((message, tone) => this.notify(message, tone));
 
     this.canvasEngine = new CanvasEngine(this.canvasArea.refs.canvasHost, this.eventBus);
@@ -129,6 +146,7 @@ export class App {
     this.historyManager = new HistoryManager();
     this.exportManager = new ExportManager(this.canvasEngine);
     this.aiImageEditor = new AiImageEditor();
+    this.backgroundRemover = new BackgroundRemover();
     this.sessionSerializer = new SessionSerializer();
     this.uiStateController = new UiStateController(this);
     this.savedRoundsController = new SavedRoundsController(this);
@@ -146,6 +164,7 @@ export class App {
     this.renderLayerPanel();
     this.renderSessions();
     this.renderThemes();
+    this.renderShortcuts();
     this.bindEvents();
     this.syncRegionCreationOptionsFromToolbar();
     this.updateRegionEffectControlVisibility();
@@ -157,11 +176,13 @@ export class App {
     this.toolbar = new Toolbar();
     this.layerPanel = new LayerPanel();
     this.maskPanel = new MaskPanel(this.maskStorage.getMasks());
+    this.backgroundRemovalPanel = new BackgroundRemovalPanel();
     this.aiEditPanel = new AiEditPanel();
     this.canvasArea = new CanvasArea();
     this.sessionPanel = new SessionPanel();
     this.savedRoundsPanel = new SavedRoundsPanel();
     this.themePanel = new ThemePanel();
+    this.shortcutsPanel = new ShortcutsPanel();
     this.settingsModal = new SettingsModal();
     this.toastManager = new ToastManager();
 
@@ -193,6 +214,7 @@ export class App {
     this.maskPanel.element.prepend(this.chromeControls);
     this.settingsModal.refs.sessionsContent.appendChild(this.sessionPanel.element);
     this.settingsModal.refs.themesContent.appendChild(this.themePanel.element);
+    this.settingsModal.refs.shortcutsContent.appendChild(this.shortcutsPanel.element);
 
     const grid = el('div', { id: 'container', className: 'app-grid' }, [
       this.toolbar.element,
@@ -200,6 +222,7 @@ export class App {
       this.maskPanel.element,
     ]);
 
+    this.maskPanel.element.appendChild(this.backgroundRemovalPanel.element);
     this.maskPanel.element.appendChild(this.aiEditPanel.element);
 
     this.appShell = el('div', {
@@ -230,43 +253,95 @@ export class App {
       width: Number(toolbarRefs.brushSizeInput.value),
       sharedState: drawingState,
     });
+    this.paintEffectManager = new PaintEffectManager(
+      this.canvasEngine,
+      this.layerManager,
+      this.eventBus,
+      this.brushTool
+    );
+    this.blurPaintTool = new PaintEffectBrushTool(
+      this.canvasEngine,
+      this.layerManager,
+      this.eventBus,
+      this.paintEffectManager,
+      'blur',
+      {
+        width: Number(toolbarRefs.brushSizeInput.value),
+        opacity: Number(toolbarRefs.brushOpacityInput.value) / 100,
+        sharedState: drawingState,
+      }
+    );
+    this.pixelatePaintTool = new PaintEffectBrushTool(
+      this.canvasEngine,
+      this.layerManager,
+      this.eventBus,
+      this.paintEffectManager,
+      'pixelate',
+      {
+        width: Number(toolbarRefs.brushSizeInput.value),
+        opacity: Number(toolbarRefs.brushOpacityInput.value) / 100,
+        sharedState: drawingState,
+      }
+    );
     this.rectTool = new RectTool(this.canvasEngine, this.layerManager);
     this.regionEffectTool = new RegionEffectTool(this.canvasEngine, this.layerManager, this.eventBus);
+    this.cropTool = new CropTool(this.canvasEngine, this.eventBus);
     this.textTool = new TextTool(this.canvasEngine, this.layerManager, this.eventBus);
     this.selectTool = new SelectTool(
       this.canvasEngine,
       this.layerManager,
       this.eventBus,
+      this.brushTool,
       this.textTool,
       this.regionEffectTool
     );
 
     this.toolManager.registerTool('brush', this.brushTool);
     this.toolManager.registerTool('eraser', this.eraserTool);
+    this.toolManager.registerTool('blur-brush', this.blurPaintTool);
+    this.toolManager.registerTool('pixelate-brush', this.pixelatePaintTool);
     this.toolManager.registerTool('region', this.regionEffectTool);
+    this.toolManager.registerTool('crop', this.cropTool);
     this.toolManager.registerTool('select', this.selectTool);
     this.toolManager.setActiveTool('brush');
   }
 
   initializeKeyboardShortcuts() {
     this.keyboardShortcuts = new KeyboardShortcuts({
-      layerManager: this.layerManager,
+      settings: this.settings,
       historyManager: this.historyManager,
       selectTool: this.selectTool,
-      brushTool: this.brushTool,
-      eraserTool: this.eraserTool,
-      maskManager: this.maskManager,
-      brushSizeInput: this.toolbar.refs.brushSizeInput,
-      toolManager: this.toolManager,
       savedRoundsElement: this.savedRoundsPanel.refs.savedRounds,
-      onNavigateSavedRounds: (direction) => this.displaySavedRounds(direction),
-      onShowCustomSubreddit: () => this.showCustomSubredditInput(),
-      onDuplicateSelection: () => this.duplicateSelectedObject(),
-      onDeleteSelection: () => this.deleteSelectedObject(),
-      onAdjustObjectOpacity: (delta) => this.adjustSelectedObjectOpacity(delta),
-      onRedo: () => this.historyManager.redo(),
-      onAdjustMaskRotation: (deltaDegrees) => this.adjustMaskRotationByDelta(deltaDegrees),
-      onNudgeSelection: (deltaX, deltaY) => this.nudgeSelectedObject(deltaX, deltaY),
+      shouldIgnoreShortcut: () => !this.settingsModal.refs.overlay.classList.contains('hidden'),
+      handlers: {
+        undo: () => this.historyManager.undo(),
+        redo: () => this.historyManager.redo(),
+        copyCanvas: () => {
+          void this.copyImage();
+        },
+        duplicate: () => this.duplicateSelectedObject(),
+        delete: () => this.deleteSelectedObject(),
+        brush: () => this.toolManager.setActiveTool('brush'),
+        eraser: () => this.toolManager.setActiveTool('eraser'),
+        move: () => this.toolManager.setActiveTool('select'),
+        blurBrush: () => this.activatePaintEffectBrush('blur'),
+        pixelBrush: () => this.activatePaintEffectBrush('pixelate'),
+        crop: () => this.startCropMode?.(),
+        addRectangle: () => this.addRectangle(),
+        addText: () => this.addText(),
+        addRegion: () => this.startRegionInsertion(),
+        brushSizeUp: () => this.adjustBrushSize(5),
+        brushSizeDown: () => this.adjustBrushSize(-5),
+        stepLeft: () => this.handleContextLeftShortcut(),
+        stepRight: () => this.handleContextRightShortcut(),
+        opacityDown: () => this.adjustSelectedObjectOpacity(-0.1),
+        opacityUp: () => this.adjustSelectedObjectOpacity(0.1),
+        nudgeLeft: () => this.nudgeSelectedObject(-10, 0),
+        nudgeRight: () => this.nudgeSelectedObject(10, 0),
+        nudgeDown: () => this.nudgeSelectedObject(0, 10),
+        nudgeUp: () => this.nudgeSelectedObject(0, -10),
+        customSubreddit: () => this.showCustomSubredditInput(),
+      },
     });
     this.keyboardShortcuts.init();
   }
@@ -311,6 +386,7 @@ export class App {
     this.bindToolEvents();
     this.bindLayerPanelEvents();
     this.bindMaskEvents();
+    this.bindBackgroundRemovalEvents();
     this.bindAiEditEvents();
     this.bindImageLoadingEvents();
     this.bindCanvasActions();
@@ -318,6 +394,7 @@ export class App {
     this.bindSessionEvents();
     this.bindSavedRoundEvents();
     this.bindSettingsEvents();
+    this.bindShortcutEvents();
     this.bindAppEvents();
   }
 
@@ -342,6 +419,10 @@ export class App {
 
     this.settingsModal.refs.themesTabButton.addEventListener('click', () => {
       this.settingsModal.setActiveTab('themes');
+    });
+
+    this.settingsModal.refs.shortcutsTabButton.addEventListener('click', () => {
+      this.settingsModal.setActiveTab('shortcuts');
     });
 
     document.addEventListener('keydown', (event) => {
@@ -434,8 +515,28 @@ export class App {
       this.toolManager.setActiveTool('eraser');
     });
 
+    refs.blurBrushButton.addEventListener('click', () => {
+      this.activatePaintEffectBrush('blur');
+    });
+
+    refs.pixelateBrushButton.addEventListener('click', () => {
+      this.activatePaintEffectBrush('pixelate');
+    });
+
     refs.moveButton.addEventListener('click', () => {
       this.toolManager.setActiveTool('select');
+    });
+
+    refs.cropButton.addEventListener('click', () => {
+      this.startCropMode();
+    });
+
+    refs.applyCropButton.addEventListener('click', async () => {
+      await this.applyCropFromTool();
+    });
+
+    refs.cancelCropButton.addEventListener('click', () => {
+      this.cancelCropMode();
     });
 
     refs.addRectangleButton.addEventListener('click', () => {
@@ -458,6 +559,8 @@ export class App {
       const width = Number(event.target.value);
       this.brushTool.setWidth(width);
       this.eraserTool.setWidth(width);
+      this.blurPaintTool.setWidth(width);
+      this.pixelatePaintTool.setWidth(width);
     });
 
     refs.brushColorInput.addEventListener('input', (event) => {
@@ -469,7 +572,28 @@ export class App {
     });
 
     refs.brushOpacityInput.addEventListener('input', (event) => {
-      this.brushTool.setOpacity(Number(event.target.value) / 100);
+      const opacity = Number(event.target.value) / 100;
+      this.brushTool.setOpacity(opacity);
+      this.blurPaintTool.setOpacity(opacity);
+      this.pixelatePaintTool.setOpacity(opacity);
+
+      const activeLayer = this.layerManager.getActiveLayer();
+      if (activeLayer?.type === 'paint-effect') {
+        this.paintEffectManager.updateLayerEffect(activeLayer.id, {
+          opacity,
+        });
+      }
+    });
+
+    refs.paintEffectAmountInput.addEventListener('input', (event) => {
+      const activeLayer = this.layerManager.getActiveLayer();
+
+      if (activeLayer?.type === 'paint-effect') {
+        this.paintEffectManager.updateLayerEffect(activeLayer.id, {
+          amount: Number(event.target.value),
+        });
+        this.renderLayerPanel();
+      }
     });
 
     refs.undoButton.addEventListener('click', () => {
@@ -618,9 +742,8 @@ export class App {
       this.applySelectedTextStyle({ dropShadow: isActive });
     });
 
-    refs.regionShapeSelect.addEventListener('change', () => {
-      this.syncRegionCreationOptionsFromToolbar();
-      this.updateRegionEffectControlVisibility();
+    refs.regionShapeSelect.addEventListener('change', (event) => {
+      this.applySelectedRegionShape(event.target.value);
     });
 
     refs.regionEffectSelect.addEventListener('change', (event) => {
@@ -788,55 +911,71 @@ export class App {
     this.layerPanel.refs.list.addEventListener('click', (event) => {
       const button = event.target.closest('[data-layer-action]');
 
-      if (!button) {
+      if (button) {
+        event.stopPropagation();
+        const { layerId, layerAction } = button.dataset;
+
+        if (layerAction === 'toggle-visibility') {
+          this.toggleLayerVisibility(layerId);
+          return;
+        }
+
+        if (layerAction === 'toggle-lock') {
+          this.toggleLayerLock(layerId);
+          return;
+        }
+
+        if (layerAction === 'move-up') {
+          this.moveLayer(layerId, 1);
+          return;
+        }
+
+        if (layerAction === 'move-down') {
+          this.moveLayer(layerId, -1);
+          return;
+        }
+
+        if (layerAction === 'toggle-settings') {
+          this.toggleLayerSettings(layerId);
+          return;
+        }
+
+        if (layerAction === 'toggle-mask-invert') {
+          this.toggleMaskLayerInvert(layerId);
+          return;
+        }
+
+        if (layerAction === 'reseed-mask-displacement') {
+          this.reseedMaskLayerDisplacement(layerId);
+          return;
+        }
+
+        if (layerAction === 'delete') {
+          this.deleteLayer(layerId);
+        }
         return;
       }
 
-      const { layerId, layerAction } = button.dataset;
+      const row = event.target.closest('.layer-row');
 
-      if (layerAction === 'select') {
-        this.selectLayerById(layerId);
+      if (row && !event.target.closest('input, select, textarea, button')) {
+        this.selectLayerById(row.dataset.layerId, {
+          append: event.shiftKey,
+        });
+      }
+    });
+
+    this.layerPanel.refs.list.addEventListener('keydown', (event) => {
+      const row = event.target.closest('.layer-row');
+
+      if (!row || (event.key !== 'Enter' && event.key !== ' ')) {
         return;
       }
 
-      if (layerAction === 'toggle-visibility') {
-        this.toggleLayerVisibility(layerId);
-        return;
-      }
-
-      if (layerAction === 'toggle-lock') {
-        this.toggleLayerLock(layerId);
-        return;
-      }
-
-      if (layerAction === 'move-up') {
-        this.moveLayer(layerId, 1);
-        return;
-      }
-
-      if (layerAction === 'move-down') {
-        this.moveLayer(layerId, -1);
-        return;
-      }
-
-      if (layerAction === 'toggle-settings') {
-        this.toggleLayerSettings(layerId);
-        return;
-      }
-
-      if (layerAction === 'toggle-mask-invert') {
-        this.toggleMaskLayerInvert(layerId);
-        return;
-      }
-
-      if (layerAction === 'reseed-mask-displacement') {
-        this.reseedMaskLayerDisplacement(layerId);
-        return;
-      }
-
-      if (layerAction === 'delete') {
-        this.deleteLayer(layerId);
-      }
+      event.preventDefault();
+      this.selectLayerById(row.dataset.layerId, {
+        append: event.shiftKey,
+      });
     });
 
     this.layerPanel.refs.list.addEventListener('focusin', (event) => {
@@ -957,6 +1096,12 @@ export class App {
 
     [...this.maskPanel.refs.customMaskList.children].forEach((button) => {
       this.bindCustomMaskButton(button);
+    });
+  }
+
+  bindBackgroundRemovalEvents() {
+    this.backgroundRemovalPanel.refs.button.addEventListener('click', async () => {
+      await this.removeBackgroundFromCurrentTarget();
     });
   }
 
@@ -1333,15 +1478,22 @@ export class App {
       this.queueAutosave();
     });
 
+    this.eventBus.on('layer:active-changed', () => {
+      this.renderLayerPanel();
+    });
+
     this.eventBus.on('selection:changed', ({ layer, object }) => {
-      if (layer?.type === 'mask' && object?.__toolType === 'mask') {
-        this.maskManager.setCurrentMask(object, layer);
+      this.selectedPanelLayerId = null;
+      const primaryObject = layer ? this.layerManager.getPrimaryContentObject(layer) ?? object : object;
+
+      if (layer?.type === 'mask' && primaryObject?.__toolType === 'mask') {
+        this.maskManager.setCurrentMask(primaryObject, layer);
         this.syncMaskControlsFromState(this.maskEffects.snapshotCurrentMask());
       }
 
-      this.renderLayerPanel(layer?.id ?? null);
-      this.syncTextControlsFromSelection(object ?? null);
-      this.syncRegionEffectControlsFromSelection(object ?? null);
+      this.renderLayerPanel();
+      this.syncTextControlsFromSelection(primaryObject ?? null);
+      this.syncRegionEffectControlsFromSelection(primaryObject ?? null);
       this.updateWorkflowStatus();
     });
 
@@ -1414,8 +1566,16 @@ export class App {
     this.eventBus.on('tool:changed', ({ name }) => {
       this.toolbar.refs.brushButton.classList.toggle('is-active', name === 'brush');
       this.toolbar.refs.eraserButton.classList.toggle('is-active', name === 'eraser');
+      this.toolbar.refs.blurBrushButton.classList.toggle('is-active', name === 'blur-brush');
+      this.toolbar.refs.pixelateBrushButton.classList.toggle('is-active', name === 'pixelate-brush');
       this.toolbar.refs.moveButton.classList.toggle('is-active', name === 'select');
+      this.toolbar.refs.cropButton.classList.toggle('is-active', name === 'crop');
       this.toolbar.refs.addRegionButton.classList.toggle('is-active', name === 'region');
+      this.toolbar.refs.paintEffectAmountField.hidden = !['blur-brush', 'pixelate-brush'].includes(name);
+      this.toolbar.refs.cropActionRow.hidden = name !== 'crop';
+      if (['blur-brush', 'pixelate-brush'].includes(name)) {
+        this.syncPaintEffectControls();
+      }
       this.renderLayerPanel();
       this.updateWorkflowStatus();
     });
@@ -1500,6 +1660,122 @@ export class App {
     this.themePanel.refs.deleteButton.disabled = activeTheme.builtin;
   }
 
+  renderShortcuts() {
+    const commands = this.keyboardShortcuts?.getCommands?.() ?? [];
+
+    this.shortcutsPanel.renderCommands(commands, (binding) => this.keyboardShortcuts.formatBinding(binding));
+    this.updateShortcutLabels();
+  }
+
+  bindShortcutEvents() {
+    let activeCaptureCommandId = '';
+
+    this.shortcutsPanel.refs.resetButton.addEventListener('click', () => {
+      this.keyboardShortcuts.resetAllBindings();
+      this.shortcutsPanel.setCapture('');
+      this.shortcutsPanel.setMessage('Shortcuts reset to defaults.', 'success');
+      activeCaptureCommandId = '';
+      this.renderShortcuts();
+    });
+
+    this.shortcutsPanel.refs.list.addEventListener('click', (event) => {
+      const captureButton = event.target.closest('[data-shortcut-command]');
+      const resetButton = event.target.closest('[data-shortcut-reset]');
+
+      if (captureButton) {
+        activeCaptureCommandId = captureButton.dataset.shortcutCommand;
+        this.shortcutsPanel.setCapture(activeCaptureCommandId);
+        this.shortcutsPanel.setMessage('Press the new shortcut.', 'info');
+        this.renderShortcuts();
+        return;
+      }
+
+      if (resetButton) {
+        this.keyboardShortcuts.resetBinding(resetButton.dataset.shortcutReset);
+        this.shortcutsPanel.setMessage('Shortcut reset.', 'success');
+        this.renderShortcuts();
+      }
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (!activeCaptureCommandId) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (event.key === 'Escape') {
+        activeCaptureCommandId = '';
+        this.shortcutsPanel.setCapture('');
+        this.shortcutsPanel.setMessage('Shortcut capture cancelled.', 'info');
+        this.renderShortcuts();
+        return;
+      }
+
+      const binding = this.keyboardShortcuts.eventToBinding(event);
+
+      if (!binding) {
+        return;
+      }
+
+      const result = this.keyboardShortcuts.setBinding(activeCaptureCommandId, binding);
+      activeCaptureCommandId = '';
+      this.shortcutsPanel.setCapture('');
+      this.shortcutsPanel.setMessage(result.message, result.ok ? 'success' : 'warning');
+      this.renderShortcuts();
+    }, true);
+  }
+
+  updateShortcutLabels() {
+    const buttonBindings = new Map([
+      [this.toolbar.refs.brushButton, this.keyboardShortcuts.getBinding('brush')],
+      [this.toolbar.refs.eraserButton, this.keyboardShortcuts.getBinding('eraser')],
+      [this.toolbar.refs.moveButton, this.keyboardShortcuts.getBinding('move')],
+      [this.toolbar.refs.blurBrushButton, this.keyboardShortcuts.getBinding('blurBrush')],
+      [this.toolbar.refs.pixelateBrushButton, this.keyboardShortcuts.getBinding('pixelBrush')],
+      [this.toolbar.refs.cropButton, this.keyboardShortcuts.getBinding('crop')],
+      [this.toolbar.refs.addRectangleButton, this.keyboardShortcuts.getBinding('addRectangle')],
+      [this.toolbar.refs.addTextButton, this.keyboardShortcuts.getBinding('addText')],
+      [this.toolbar.refs.addRegionButton, this.keyboardShortcuts.getBinding('addRegion')],
+      [this.toolbar.refs.duplicateButton, this.keyboardShortcuts.getBinding('duplicate')],
+      [this.toolbar.refs.deleteButton, this.keyboardShortcuts.getBinding('delete')],
+      [this.toolbar.refs.undoButton, this.keyboardShortcuts.getBinding('undo')],
+      [this.canvasArea.refs.copyImageButton, this.keyboardShortcuts.getBinding('copyCanvas')],
+    ]);
+
+    for (const [button, binding] of buttonBindings.entries()) {
+      if (!button) {
+        continue;
+      }
+
+      const baseLabel = button.dataset.shortcutLabel || button.textContent || '';
+      const formattedBinding = this.keyboardShortcuts.formatBinding(binding);
+      const labelHtml = this.formatShortcutLabel(baseLabel, binding);
+      button.innerHTML = `${labelHtml}<span class="shortcut-badge">${formattedBinding}</span>`;
+    }
+  }
+
+  formatShortcutLabel(label, binding) {
+    const plainBinding = typeof binding === 'string' && /^[A-Z0-9]$/.test(binding) ? binding : '';
+
+    if (!plainBinding) {
+      return `<span class="shortcut-label-text">${label}</span>`;
+    }
+
+    const index = label.toUpperCase().indexOf(plainBinding);
+
+    if (index === -1) {
+      return `<span class="shortcut-label-text">${label}</span>`;
+    }
+
+    const before = label.slice(0, index);
+    const match = label.slice(index, index + 1);
+    const after = label.slice(index + 1);
+
+    return `<span class="shortcut-label-text">${before}<u>${match}</u>${after}</span>`;
+  }
+
   flashButtonSuccess(button, text = 'Saved!', duration = 1600) {
     if (!button) {
       return;
@@ -1565,8 +1841,62 @@ export class App {
     }
   }
 
+  setBackgroundVisibility(visible) {
+    if (!this.canvasEngine?.backgroundSprite) {
+      return;
+    }
+
+    const nextVisible = visible !== false;
+    this.canvasEngine.backgroundSprite.visible = nextVisible;
+
+    if (this.currentBackgroundSource) {
+      this.currentBackgroundSource.visible = nextVisible;
+    }
+  }
+
   serializeCurrentSession() {
     return this.sessionSerializer.serialize(this);
+  }
+
+  createSceneSnapshot({ forceEmbeddedBackground = false } = {}) {
+    const document = this.serializeCurrentSession();
+
+    if (!document) {
+      return null;
+    }
+
+    if ((forceEmbeddedBackground || !document.canRestore) && this.canvasEngine.sourceImageElement) {
+      const fullRect = {
+        x: 0,
+        y: 0,
+        width: this.canvasEngine.canvasWidth,
+        height: this.canvasEngine.canvasHeight,
+      };
+      const dataUrl = this.cropElementToDataUrl(this.canvasEngine.sourceImageElement, fullRect);
+      document.background.embeddedDataUrl = dataUrl;
+      document.background.url = document.background.url || dataUrl;
+      document.canRestore = true;
+    }
+
+    return document;
+  }
+
+  async applySceneSnapshot(document) {
+    if (!document) {
+      return false;
+    }
+
+    this.isRestoringSession = true;
+
+    try {
+      await this.sessionSerializer.restore(this, document);
+      this.syncExportControlsFromPreset();
+      this.renderLayerPanel();
+      this.queueAutosave();
+      return true;
+    } finally {
+      this.isRestoringSession = false;
+    }
   }
 
   queueAutosave() {
@@ -1764,6 +2094,182 @@ export class App {
     this.recordLayerAdded(result.layer);
   }
 
+  activatePaintEffectBrush(effectType) {
+    const amount = Number(this.toolbar.refs.paintEffectAmountInput.value);
+    const opacity = Number(this.toolbar.refs.brushOpacityInput.value) / 100;
+    const layer = this.paintEffectManager.ensureActiveEffectLayer(effectType, {
+      amount,
+      opacity,
+    });
+
+    this.layerManager.setActiveLayer(layer.id);
+    this.selectTool.selectLayer(layer, this.selectTool.getPrimaryLayerObject(layer));
+    this.toolManager.setActiveTool(effectType === 'pixelate' ? 'pixelate-brush' : 'blur-brush');
+    this.syncPaintEffectControls();
+  }
+
+  syncPaintEffectControls() {
+    const activeLayer = this.layerManager.getActiveLayer();
+    const effect = activeLayer?.paintEffect ?? null;
+
+    if (!effect) {
+      this.toolbar.refs.paintEffectAmountInput.value = '12';
+      return;
+    }
+
+    this.toolbar.refs.paintEffectAmountInput.value = String(Math.round(effect.amount ?? 12));
+    this.toolbar.refs.brushOpacityInput.value = String(Math.round((effect.opacity ?? 1) * 100));
+  }
+
+  adjustBrushSize(delta) {
+    const input = this.toolbar.refs.brushSizeInput;
+    const nextWidth = Math.max(1, Math.min(50, Number(input.value) + delta));
+    input.value = String(nextWidth);
+    this.brushTool.setWidth(nextWidth);
+    this.eraserTool.setWidth(nextWidth);
+    this.blurPaintTool.setWidth(nextWidth);
+    this.pixelatePaintTool.setWidth(nextWidth);
+  }
+
+  handleContextLeftShortcut() {
+    if (this.savedRoundsPanel.refs.savedRounds && !this.savedRoundsPanel.refs.savedRounds.classList.contains('hidden')) {
+      this.displaySavedRounds(1);
+      return;
+    }
+
+    this.adjustMaskRotationByDelta(-2);
+  }
+
+  handleContextRightShortcut() {
+    if (this.savedRoundsPanel.refs.savedRounds && !this.savedRoundsPanel.refs.savedRounds.classList.contains('hidden')) {
+      this.displaySavedRounds(2);
+      return;
+    }
+
+    this.adjustMaskRotationByDelta(2);
+  }
+
+  startCropMode() {
+    if (!this.canvasEngine.sourceImageElement) {
+      this.notify('Load an image before resizing the canvas.', 'warning');
+      return;
+    }
+
+    this.toolManager.setActiveTool('crop');
+    this.toolbar.refs.cropActionRow.hidden = false;
+  }
+
+  cancelCropMode() {
+    this.toolbar.refs.cropActionRow.hidden = true;
+    this.toolManager.setActiveTool('select');
+  }
+
+  async applyCropFromTool() {
+    const cropRect = this.cropTool.getCropRect();
+
+    if (!cropRect) {
+      return;
+    }
+
+    const beforeDocument = this.createSceneSnapshot({
+      forceEmbeddedBackground: true,
+    });
+    await this.performDestructiveCrop(cropRect);
+    const afterDocument = this.createSceneSnapshot({
+      forceEmbeddedBackground: true,
+    });
+
+    this.cancelCropMode();
+
+    if (!beforeDocument || !afterDocument) {
+      return;
+    }
+
+    this.historyManager.pushExecuted({
+      label: 'Resize canvas',
+      undo: () => {
+        void this.applySceneSnapshot(beforeDocument);
+      },
+      redo: () => {
+        void this.applySceneSnapshot(afterDocument);
+      },
+    });
+    this.queueAutosave();
+  }
+
+  async performDestructiveCrop(rect) {
+    const resizeRect = this.normalizeCanvasResizeRect(rect);
+    const backgroundDataUrl = this.cropElementToDataUrl(this.canvasEngine.sourceImageElement, resizeRect);
+    const backgroundVisible = this.canvasEngine.backgroundSprite?.visible !== false;
+    const backgroundOpacity = this.canvasEngine.backgroundSprite?.alpha ?? 1;
+
+    const allLayers = this.layerManager.getLayers();
+
+    for (const layer of allLayers) {
+      layer.container.position.set(
+        (layer.container.x ?? 0) - resizeRect.x,
+        (layer.container.y ?? 0) - resizeRect.y
+      );
+    }
+
+    await this.canvasEngine.loadBackgroundImage(backgroundDataUrl, false, {
+      preserveScene: true,
+      documentSize: {
+        width: resizeRect.width,
+        height: resizeRect.height,
+      },
+    });
+    this.setBackgroundSource({
+      type: 'local',
+      url: backgroundDataUrl,
+      embeddedDataUrl: backgroundDataUrl,
+      visible: backgroundVisible,
+      opacity: backgroundOpacity,
+      cropped: true,
+    });
+    this.renderLayerPanel();
+  }
+
+  cropElementToDataUrl(source, rect) {
+    const sourceWidth = source?.naturalWidth || source?.videoWidth || source?.width || this.canvasEngine.canvasWidth;
+    const sourceHeight = source?.naturalHeight || source?.videoHeight || source?.height || this.canvasEngine.canvasHeight;
+    const scaleX = sourceWidth / this.canvasEngine.canvasWidth;
+    const scaleY = sourceHeight / this.canvasEngine.canvasHeight;
+    const sourceRect = {
+      x: Math.round(rect.x * scaleX),
+      y: Math.round(rect.y * scaleY),
+      width: Math.max(1, Math.round(rect.width * scaleX)),
+      height: Math.max(1, Math.round(rect.height * scaleY)),
+    };
+    const canvas = document.createElement('canvas');
+    canvas.width = sourceRect.width;
+    canvas.height = sourceRect.height;
+    const context = canvas.getContext('2d');
+
+    if (!context) {
+      throw new Error('Could not crop the current image.');
+    }
+
+    context.drawImage(
+      source,
+      -sourceRect.x,
+      -sourceRect.y,
+      Math.max(1, Math.round(this.canvasEngine.canvasWidth * scaleX)),
+      Math.max(1, Math.round(this.canvasEngine.canvasHeight * scaleY))
+    );
+
+    return canvas.toDataURL('image/png');
+  }
+
+  normalizeCanvasResizeRect(rect) {
+    return {
+      x: Math.round(Number(rect?.x) || 0),
+      y: Math.round(Number(rect?.y) || 0),
+      width: Math.max(1, Math.round(Number(rect?.width) || 0)),
+      height: Math.max(1, Math.round(Number(rect?.height) || 0)),
+    };
+  }
+
   startRegionInsertion() {
     if (!this.canvasEngine.sourceImageElement) {
       this.notify('Load an image before adding a region.', 'warning');
@@ -1786,12 +2292,14 @@ export class App {
   }
 
   getSelectedTextObject() {
-    const object = this.selectTool.getSelectedObject();
+    const layer = this.selectTool.getSelectedLayer();
+    const object = layer ? this.layerManager.getPrimaryContentObject(layer) : this.selectTool.getSelectedObject();
     return object?.__toolType === 'text' ? object : null;
   }
 
   getSelectedRegionEffectObject() {
-    const object = this.selectTool.getSelectedObject();
+    const layer = this.selectTool.getSelectedLayer();
+    const object = layer ? this.layerManager.getPrimaryContentObject(layer) : this.selectTool.getSelectedObject();
     return object?.__toolType === 'effect-region' ? object : null;
   }
 
@@ -1888,6 +2396,56 @@ export class App {
     refs.regionAmountField.hidden = definition.showAmount !== true;
     refs.regionRadiusField.hidden = definition.showRadius !== true;
     refs.regionReseedField.hidden = definition.showReseed !== true;
+  }
+
+  applySelectedRegionShape(shapeType) {
+    const object = this.getSelectedRegionEffectObject();
+
+    if (!object) {
+      this.syncRegionCreationOptionsFromToolbar();
+      this.updateRegionEffectControlVisibility();
+      return;
+    }
+
+    const beforeData = JSON.parse(JSON.stringify(object.__regionEffectData));
+    const nextShape = this.buildRetroactiveRegionShape(object, shapeType);
+
+    this.regionEffectTool.updateRegionEffect(object, {
+      shape: nextShape,
+    });
+    this.syncRegionEffectControlsFromSelection(object);
+    this.commitRegionEffectHistory(object, beforeData);
+  }
+
+  buildRetroactiveRegionShape(object, shapeType) {
+    const shapeBounds = this.regionEffectTool.getShapeBounds(object.__regionEffectData.shape);
+    const width = Math.max(8, Math.round(shapeBounds.width));
+    const height = Math.max(8, Math.round(shapeBounds.height));
+
+    if (shapeType === 'circle') {
+      return {
+        type: 'circle',
+        radius: Math.max(width, height) / 2,
+      };
+    }
+
+    if (shapeType === 'freehand') {
+      return {
+        type: 'freehand',
+        points: [
+          { x: -width / 2, y: -height / 2 },
+          { x: width / 2, y: -height / 2 },
+          { x: width / 2, y: height / 2 },
+          { x: -width / 2, y: height / 2 },
+        ],
+      };
+    }
+
+    return {
+      type: 'rect',
+      width,
+      height,
+    };
   }
 
   applySelectedRegionEffectType(effectType) {
@@ -2086,19 +2644,30 @@ export class App {
     });
   }
 
-  renderLayerPanel(
-    selectedLayerId = this.selectTool?.getSelectedLayer()?.id ??
-      this.layerManager?.getActiveLayer()?.id ??
-      null
-  ) {
+  renderLayerPanel() {
     if (!this.layerPanel || !this.layerManager) {
       return;
     }
 
+    const selectedPanelLayerId = this.getSelectedPanelLayerId();
+
     this.layerPanel.renderLayers(
       this.getLayerPanelLayers(),
-      selectedLayerId
+      {
+        selectedLayerIds: selectedPanelLayerId
+          ? [selectedPanelLayerId]
+          : (this.selectTool?.getSelectedLayerIds?.() ?? []),
+        activeLayerId: selectedPanelLayerId ?? this.layerManager?.getActiveLayer()?.id ?? null,
+      }
     );
+  }
+
+  getSelectedPanelLayerId() {
+    if (this.selectedPanelLayerId === BACKGROUND_LAYER_ID && this.canvasEngine?.backgroundSprite) {
+      return BACKGROUND_LAYER_ID;
+    }
+
+    return null;
   }
 
   getLayerPanelLayers() {
@@ -2141,7 +2710,7 @@ export class App {
   }
 
   createLayerPanelEntry(layer) {
-    const object = layer?.container?.children?.[layer.container.children.length - 1] ?? null;
+    const object = this.layerManager.getPrimaryContentObject(layer);
     const isDrawingLayer = layer?.type === 'drawing';
     const settings = this.buildLayerPanelSettings(layer, object);
 
@@ -2232,19 +2801,38 @@ export class App {
     }
 
     if (layer.type === 'drawing') {
+      const previewObject = object ?? layer.container.children.find((child) => child?.__toolType === 'brush-surface');
       return {
         kind: 'image',
         label: layer.name,
         badge: 'BR',
-        src: this.createSpritePreviewDataUrl(object),
+        src: this.createSpritePreviewDataUrl(previewObject),
+      };
+    }
+
+    if (layer.type === 'paint-effect') {
+      const previewObject = layer.paintEffectRuntime?.previewSprite ??
+        layer.container.children.find((child) => child?.__toolType === 'paint-effect-preview');
+      return {
+        kind: 'image',
+        label: layer.name,
+        badge: layer.paintEffect?.badge ?? 'FX',
+        src: this.createSpritePreviewDataUrl(previewObject),
       };
     }
 
     if (layer.type === 'image') {
+      const sourceType = object?.__imageLayerData?.sourceType ?? '';
+      const badge = sourceType === 'background-removal'
+        ? 'CUT'
+        : object?.__imageLayerData?.serviceId
+          ? 'AI'
+          : 'IMG';
+
       return {
         kind: 'image',
         label: layer.name,
-        badge: 'AI',
+        badge,
         src: this.createSpritePreviewDataUrl(object),
       };
     }
@@ -2343,6 +2931,189 @@ export class App {
     } catch {
       return '';
     }
+  }
+
+  async removeBackgroundFromCurrentTarget() {
+    if (!this.canvasEngine?.sourceImageElement) {
+      this.backgroundRemovalPanel.setMessage('Load an image before removing a background.', 'warning');
+      this.notify('Load an image before removing a background.', 'warning');
+      return;
+    }
+
+    const panel = this.backgroundRemovalPanel;
+
+    panel.setBusy(true, 'Preparing');
+    panel.setMessage('');
+
+    try {
+      const target = await this.captureBackgroundRemovalSource();
+      const layerName = this.buildBackgroundRemovalLayerName(target);
+      const removedBlob = await this.backgroundRemover.removeBackground(target.imageDataUrl, {
+        onProgress: (key, current, total) => {
+          panel.setBusy(true, this.getBackgroundRemovalProgressLabel(key, current, total));
+        },
+      });
+      const persistentUrl = await this.blobToDataUrl(removedBlob);
+      const inserted = await this.createGeneratedImageLayer({
+        result: {
+          imageBlob: removedBlob,
+          persistentUrl,
+        },
+        documentRect: target.documentRect,
+        name: layerName,
+        metadata: {
+          sourceType: 'background-removal',
+          sourceKind: target.kind,
+          sourceLayerId: target.layer?.id ?? '',
+          sourceLayerName: target.name,
+        },
+      });
+      const insertedIndex = this.layerManager.getLayers().findIndex((entry) => entry.id === inserted.layer.id);
+
+      if (target.kind === 'background') {
+        this.setBackgroundVisibility(false);
+        this.renderLayerPanel();
+      } else {
+        this.layerManager.setLayerVisibility(target.layer.id, false);
+      }
+
+      this.toolManager.setActiveTool('select');
+      this.selectTool.selectLayer(inserted.layer, inserted.sprite);
+
+      this.historyManager.pushExecuted({
+        label: 'Remove background',
+        undo: () => {
+          this.selectTool.clearSelection();
+          this.layerManager.detachLayer(inserted.layer.id);
+
+          if (target.kind === 'background') {
+            this.setBackgroundVisibility(target.originalVisible);
+            this.renderLayerPanel();
+            return;
+          }
+
+          this.layerManager.setLayerVisibility(target.layer.id, target.originalVisible);
+        },
+        redo: () => {
+          this.layerManager.insertLayer(inserted.layer, insertedIndex);
+
+          if (target.kind === 'background') {
+            this.setBackgroundVisibility(false);
+            this.renderLayerPanel();
+          } else {
+            this.layerManager.setLayerVisibility(target.layer.id, false);
+          }
+
+          this.toolManager.setActiveTool('select');
+          this.selectTool.selectLayer(inserted.layer, inserted.sprite);
+        },
+      });
+
+      panel.setMessage('Background removed into a new layer.', 'success');
+      this.notify('Background removal completed.', 'success');
+    } catch (error) {
+      panel.setMessage(error.message, 'error');
+      this.notify(error.message, 'error', 4200);
+    } finally {
+      panel.setBusy(false);
+    }
+  }
+
+  async captureBackgroundRemovalSource() {
+    const selectedLayer = this.selectTool.getSelectedLayer();
+    const fullCanvasRect = {
+      x: 0,
+      y: 0,
+      width: this.canvasEngine.canvasWidth,
+      height: this.canvasEngine.canvasHeight,
+    };
+
+    if (!selectedLayer) {
+      return {
+        kind: 'background',
+        name: 'Base image',
+        originalVisible: this.canvasEngine.backgroundSprite?.visible !== false,
+        imageDataUrl: this.cropElementToDataUrl(this.canvasEngine.sourceImageElement, fullCanvasRect),
+        documentRect: fullCanvasRect,
+        layer: null,
+      };
+    }
+
+    const object = this.selectTool.getPrimaryLayerObject(selectedLayer);
+
+    if (!object) {
+      throw new Error('Select a layer with visible content first.');
+    }
+
+    const documentRect = this.clampDocumentRect(this.globalBoundsToDocumentRect(object.getBounds()));
+
+    if (!documentRect.width || !documentRect.height) {
+      throw new Error('The selected layer has no visible area to process.');
+    }
+
+    const fullDataUrl = await this.captureEditorComposite({
+      isolateLayerId: selectedLayer.id,
+    });
+    const imageDataUrl =
+      documentRect.width === fullCanvasRect.width &&
+      documentRect.height === fullCanvasRect.height &&
+      documentRect.x === 0 &&
+      documentRect.y === 0
+        ? fullDataUrl
+        : await this.cropDataUrlToRect(fullDataUrl, documentRect);
+
+    return {
+      kind: 'layer',
+      name: selectedLayer.name,
+      originalVisible: selectedLayer.visible !== false,
+      imageDataUrl,
+      documentRect,
+      layer: selectedLayer,
+    };
+  }
+
+  buildBackgroundRemovalLayerName(target) {
+    this.backgroundRemovalCount += 1;
+    const baseName = target?.name ? `${target.name} cutout` : 'Background removed';
+
+    return this.backgroundRemovalCount === 1
+      ? baseName
+      : `${baseName} ${this.backgroundRemovalCount}`;
+  }
+
+  getBackgroundRemovalProgressLabel(key, current = 0, total = 0) {
+    if (typeof key !== 'string') {
+      return 'Removing background';
+    }
+
+    if (key.startsWith('fetch:')) {
+      const assetName = key.replace('fetch:', '');
+
+      if (total > 0) {
+        const percent = Math.round((current / total) * 100);
+        return `Downloading ${assetName} (${percent}%)`;
+      }
+
+      return `Downloading ${assetName}`;
+    }
+
+    if (key === 'compute:decode') {
+      return 'Decoding image';
+    }
+
+    if (key === 'compute:inference') {
+      return 'Running model';
+    }
+
+    if (key === 'compute:mask') {
+      return 'Building mask';
+    }
+
+    if (key === 'compute:encode') {
+      return 'Encoding cutout';
+    }
+
+    return 'Removing background';
   }
 
   async generateAiEditedLayer() {
@@ -2549,6 +3320,23 @@ export class App {
     return canvas.toDataURL('image/png');
   }
 
+  async blobToDataUrl(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          resolve(reader.result);
+          return;
+        }
+
+        reject(new Error('Could not read the generated image.'));
+      };
+      reader.onerror = () => reject(new Error('Could not read the generated image.'));
+      reader.readAsDataURL(blob);
+    });
+  }
+
   async createGeneratedImageLayer({ result, documentRect, name, metadata = {}, objectState = null }) {
     const blob = await this.resolveAiResultBlob(result);
     const objectUrl = URL.createObjectURL(blob);
@@ -2685,7 +3473,7 @@ export class App {
         this.selectTool.setSelectionEntries(
           inserted.map(({ layer }) => ({
             layer,
-            object: layer.container.children[layer.container.children.length - 1],
+            object: this.selectTool.getPrimaryLayerObject(layer),
           }))
         );
       },
@@ -2719,7 +3507,7 @@ export class App {
         this.selectTool.setSelectionEntries(
           removedLayers.map(({ layer }) => ({
             layer,
-            object: layer.container.children[layer.container.children.length - 1],
+            object: this.selectTool.getPrimaryLayerObject(layer),
           }))
         );
       },
@@ -2761,29 +3549,43 @@ export class App {
     });
   }
 
-  selectLayerById(layerId) {
+  selectLayerById(layerId, options = {}) {
+    if (layerId === BACKGROUND_LAYER_ID) {
+      if (!this.canvasEngine?.backgroundSprite) {
+        return;
+      }
+
+      this.selectTool.clearSelection();
+      this.selectedPanelLayerId = BACKGROUND_LAYER_ID;
+      this.renderLayerPanel();
+      return;
+    }
+
+    this.selectedPanelLayerId = null;
     const layer = this.layerManager.getLayer(layerId);
     const activeToolName = this.toolManager.getActiveToolName();
+    const { append = false } = options;
 
     if (!layer || layer.locked || layer.visible === false) {
       return;
     }
 
-    if (layer.type === 'drawing' || activeToolName === 'brush' || activeToolName === 'eraser') {
-      this.layerManager.setActiveLayer(layer.id);
+    this.layerManager.setActiveLayer(layer.id);
+    const object = this.selectTool.getPrimaryLayerObject(layer);
+
+    if (object) {
+      this.selectTool.selectLayer(layer, object, {
+        append,
+      });
+    } else if (!append) {
       this.selectTool.clearSelection();
-      this.renderLayerPanel(layer.id);
-      return;
     }
 
-    const object = layer.container.children[layer.container.children.length - 1];
-
-    if (!object) {
-      return;
+    if (!['brush', 'eraser', 'blur-brush', 'pixelate-brush'].includes(activeToolName)) {
+      this.toolManager.setActiveTool('select');
     }
 
-    this.toolManager.setActiveTool('select');
-    this.selectTool.selectLayer(layer, object);
+    this.renderLayerPanel();
   }
 
   toggleLayerVisibility(layerId) {
@@ -2793,12 +3595,7 @@ export class App {
       }
 
       const nextVisible = this.canvasEngine.backgroundSprite.visible === false;
-      this.canvasEngine.backgroundSprite.visible = nextVisible;
-
-      if (this.currentBackgroundSource) {
-        this.currentBackgroundSource.visible = nextVisible;
-      }
-
+      this.setBackgroundVisibility(nextVisible);
       this.renderLayerPanel();
       this.queueAutosave();
       return;
@@ -2867,7 +3664,7 @@ export class App {
 
   getLayerObjectEntry(layerId) {
     const layer = this.layerManager.getLayer(layerId);
-    const object = layer?.container?.children?.[layer.container.children.length - 1] ?? null;
+    const object = this.layerManager.getPrimaryContentObject(layer);
 
     return {
       layer,
@@ -3031,7 +3828,7 @@ export class App {
   }
 
   syncSelectedMaskControls(layer, object, snapshot = null) {
-    if (this.selectTool.getSelectedLayer()?.id !== layer?.id || this.selectTool.getSelectedObject() !== object) {
+    if (this.selectTool.getSelectedLayer()?.id !== layer?.id) {
       return;
     }
 
@@ -3246,17 +4043,35 @@ export class App {
   }
 
   async copyImage() {
-    if (!window.ClipboardItem || !navigator.clipboard?.write) {
+    const clipboardSupportIssues = [];
+
+    if (!window.isSecureContext) {
+      clipboardSupportIssues.push('this page is not in a secure context; use https:// or http://localhost instead of file://');
+    }
+
+    if (!window.ClipboardItem) {
+      clipboardSupportIssues.push('ClipboardItem is unavailable');
+    }
+
+    if (!navigator.clipboard?.write) {
+      clipboardSupportIssues.push('navigator.clipboard.write is unavailable');
+    }
+
+    if (clipboardSupportIssues.length) {
       this.notify(
-        "Clipboard image copy isn't supported here. Firefox usually needs dom.events.asyncClipboard.clipboardItem enabled.",
+        `Clipboard image copy isn't available because ${clipboardSupportIssues.join('; ')}.`,
         'warning',
-        4200
+        6200
       );
       return;
     }
 
-    const exportOptions = this.getCurrentExportOptions();
-    const mimeType = this.exportManager.getMimeType(exportOptions.format);
+    // PNG is the only image type the Clipboard API reliably guarantees across browsers.
+    const exportOptions = {
+      ...this.getCurrentExportOptions(),
+      format: 'png',
+    };
+    const mimeType = 'image/png';
 
     try {
       const blob = await this.exportManager.exportBlob(exportOptions);
@@ -3264,10 +4079,11 @@ export class App {
       await navigator.clipboard.write([item]);
       this.notify('Image copied to clipboard.', 'success');
     } catch (error) {
+      const reason = error?.name ? `${error.name}: ${error.message || 'Clipboard write failed.'}` : 'Clipboard write failed.';
       this.notify(
-        "Clipboard image copy failed. Firefox may require dom.events.asyncClipboard.clipboardItem.",
+        `Clipboard image copy failed. ${reason}`,
         'warning',
-        4200
+        6200
       );
     }
   }

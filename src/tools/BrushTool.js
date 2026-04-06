@@ -20,7 +20,13 @@ export class BrushTool {
     };
     this.currentStroke = null;
 
-    this.eventBus.on('image:loaded', () => {
+    this.eventBus.on('image:loaded', ({ preserveScene } = {}) => {
+      if (preserveScene) {
+        this.refreshSurface();
+        this.ensureSurface();
+        return;
+      }
+
       this.clear();
       this.ensureSurface();
     });
@@ -80,8 +86,9 @@ export class BrushTool {
   clear() {
     const layerStates = this.getAllLayerStates();
 
-    for (const layerState of Object.values(layerStates)) {
+    for (const [layerId, layerState] of Object.entries(layerStates)) {
       layerState.strokes = [];
+      this.emitPaintChanged(layerId);
     }
 
     this.currentStroke = null;
@@ -147,6 +154,7 @@ export class BrushTool {
     const layerState = this.getLayerState(this.currentStroke.layerId);
     layerState.strokes.push(this.currentStroke);
     this.refreshSurface(this.currentStroke.layerId);
+    this.emitPaintChanged(this.currentStroke.layerId);
     this.eventBus.emit('stroke:committed', {
       stroke: this.currentStroke,
     });
@@ -158,6 +166,7 @@ export class BrushTool {
     const clampedIndex = Math.max(0, Math.min(index, layerState.strokes.length));
     layerState.strokes.splice(clampedIndex, 0, stroke);
     this.refreshSurface(stroke.layerId);
+    this.emitPaintChanged(stroke.layerId);
   }
 
   removeStroke(stroke) {
@@ -170,6 +179,7 @@ export class BrushTool {
 
     layerState.strokes.splice(index, 1);
     this.refreshSurface(stroke.layerId);
+    this.emitPaintChanged(stroke.layerId);
     return index;
   }
 
@@ -181,9 +191,14 @@ export class BrushTool {
     const layerState = this.getLayerState(layerId);
     layerState.strokes = Array.isArray(strokes) ? strokes : [];
     this.refreshSurface(layerId);
+    this.emitPaintChanged(layerId);
   }
 
-  ensureSurface(layerId = this.resolveTargetLayer()?.id ?? null) {
+  getSurfaceLayerId() {
+    return this.resolveTargetLayer()?.id ?? null;
+  }
+
+  ensureSurface(layerId = this.getSurfaceLayerId()) {
     if (!layerId || !this.canvasEngine.app) {
       return;
     }
@@ -317,18 +332,18 @@ export class BrushTool {
     const context = layerState.offscreenContext;
     const scaleX = layerState.offscreenCanvas.width / stroke.baseWidth;
     const scaleY = layerState.offscreenCanvas.height / stroke.baseHeight;
-    const scaledWidth = Math.max(stroke.width * scaleX, stroke.width * scaleY);
 
     context.save();
+    context.scale(scaleX, scaleY);
 
     if (stroke.tool === 'erase') {
       context.lineCap = 'round';
       context.lineJoin = 'round';
-      context.lineWidth = scaledWidth;
+      context.lineWidth = stroke.width;
       context.globalCompositeOperation = 'destination-out';
       context.strokeStyle = 'rgba(0,0,0,1)';
       context.fillStyle = 'rgba(0,0,0,1)';
-      this.drawContinuousStroke(context, stroke, scaleX, scaleY, scaledWidth, incremental);
+      this.drawContinuousStroke(context, stroke, stroke.width, incremental);
       context.restore();
       return;
     }
@@ -342,36 +357,36 @@ export class BrushTool {
     if (brushType === 'marker') {
       context.lineCap = 'square';
       context.lineJoin = 'bevel';
-      context.lineWidth = scaledWidth * 1.3;
-      this.drawContinuousStroke(context, stroke, scaleX, scaleY, scaledWidth * 1.3, incremental);
+      context.lineWidth = stroke.width * 1.3;
+      this.drawContinuousStroke(context, stroke, stroke.width * 1.3, incremental);
       context.restore();
       return;
     }
 
     if (brushType === 'dotted') {
-      this.drawDottedStroke(context, stroke, scaleX, scaleY, scaledWidth, incremental);
+      this.drawDottedStroke(context, stroke, stroke.width, incremental);
       context.restore();
       return;
     }
 
     if (brushType === 'spray') {
-      this.drawSprayStroke(context, stroke, scaleX, scaleY, scaledWidth, incremental);
+      this.drawSprayStroke(context, stroke, stroke.width, incremental);
       context.restore();
       return;
     }
 
     context.lineCap = 'round';
     context.lineJoin = 'round';
-    context.lineWidth = scaledWidth;
-    this.drawContinuousStroke(context, stroke, scaleX, scaleY, scaledWidth, incremental);
+    context.lineWidth = stroke.width;
+    this.drawContinuousStroke(context, stroke, stroke.width, incremental);
     context.restore();
   }
 
-  drawContinuousStroke(context, stroke, scaleX, scaleY, scaledWidth, incremental) {
+  drawContinuousStroke(context, stroke, width, incremental) {
     if (stroke.points.length === 1) {
       const point = stroke.points[0];
       context.beginPath();
-      context.arc(point.x * scaleX, point.y * scaleY, scaledWidth / 2, 0, Math.PI * 2);
+      context.arc(point.x, point.y, width / 2, 0, Math.PI * 2);
       context.fill();
       return;
     }
@@ -385,22 +400,22 @@ export class BrushTool {
       const end = this.midpoint(p1, p2);
 
       context.beginPath();
-      context.moveTo(start.x * scaleX, start.y * scaleY);
+      context.moveTo(start.x, start.y);
       context.quadraticCurveTo(
-        p1.x * scaleX,
-        p1.y * scaleY,
-        end.x * scaleX,
-        end.y * scaleY
+        p1.x,
+        p1.y,
+        end.x,
+        end.y
       );
       context.stroke();
       return;
     }
 
     context.beginPath();
-    context.moveTo(stroke.points[0].x * scaleX, stroke.points[0].y * scaleY);
+    context.moveTo(stroke.points[0].x, stroke.points[0].y);
 
     if (stroke.points.length === 2) {
-      context.lineTo(stroke.points[1].x * scaleX, stroke.points[1].y * scaleY);
+      context.lineTo(stroke.points[1].x, stroke.points[1].y);
       context.stroke();
       return;
     }
@@ -411,32 +426,32 @@ export class BrushTool {
       const midpoint = this.midpoint(current, next);
 
       context.quadraticCurveTo(
-        current.x * scaleX,
-        current.y * scaleY,
-        midpoint.x * scaleX,
-        midpoint.y * scaleY
+        current.x,
+        current.y,
+        midpoint.x,
+        midpoint.y
       );
     }
 
     const lastPoint = stroke.points[stroke.points.length - 1];
-    context.lineTo(lastPoint.x * scaleX, lastPoint.y * scaleY);
+    context.lineTo(lastPoint.x, lastPoint.y);
     context.stroke();
   }
 
-  drawDottedStroke(context, stroke, scaleX, scaleY, scaledWidth, incremental) {
+  drawDottedStroke(context, stroke, width, incremental) {
     const points = incremental
       ? stroke.points.slice(stroke.points.length > 2 ? -1 : -2)
       : stroke.points.filter((_, index) => index === 0 || index === stroke.points.length - 1 || index % Math.max(1, Math.round(stroke.width / 5)) === 0);
-    const radius = Math.max(1, scaledWidth * 0.4);
+    const radius = Math.max(1, width * 0.4);
 
     for (const point of points) {
       context.beginPath();
-      context.arc(point.x * scaleX, point.y * scaleY, radius, 0, Math.PI * 2);
+      context.arc(point.x, point.y, radius, 0, Math.PI * 2);
       context.fill();
     }
   }
 
-  drawSprayStroke(context, stroke, scaleX, scaleY, scaledWidth, incremental) {
+  drawSprayStroke(context, stroke, width, incremental) {
     const pointEntries = incremental
       ? stroke.points
         .slice(stroke.points.length > 2 ? -1 : -2)
@@ -447,7 +462,7 @@ export class BrushTool {
             : stroke.points.length - 2 + offset,
         }))
       : stroke.points.map((point, index) => ({ point, index }));
-    const sprayRadius = Math.max(1, scaledWidth * 0.9);
+    const sprayRadius = Math.max(1, width * 0.9);
     const dropletCount = Math.max(8, Math.round(stroke.width * 1.4));
 
     for (const entry of pointEntries) {
@@ -456,9 +471,9 @@ export class BrushTool {
       for (let dropletIndex = 0; dropletIndex < dropletCount; dropletIndex += 1) {
         const angle = random() * Math.PI * 2;
         const distance = Math.sqrt(random()) * sprayRadius;
-        const radius = Math.max(0.8, scaledWidth * (0.06 + random() * 0.12));
-        const x = entry.point.x * scaleX + Math.cos(angle) * distance;
-        const y = entry.point.y * scaleY + Math.sin(angle) * distance;
+        const radius = Math.max(0.8, width * (0.06 + random() * 0.12));
+        const x = entry.point.x + Math.cos(angle) * distance;
+        const y = entry.point.y + Math.sin(angle) * distance;
 
         context.beginPath();
         context.arc(x, y, radius, 0, Math.PI * 2);
@@ -486,11 +501,16 @@ export class BrushTool {
   resolveTargetLayer() {
     const activeLayer = this.layerManager.getActiveLayer();
 
-    if (activeLayer && activeLayer.visible !== false && activeLayer.locked !== true) {
+    if (this.canPaintLayer(activeLayer)) {
       return activeLayer;
     }
 
-    return this.layerManager.getDrawingLayer();
+    const fallbackLayer = this.layerManager.getDrawingLayer();
+    return this.canPaintLayer(fallbackLayer) ? fallbackLayer : null;
+  }
+
+  canPaintLayer(layer) {
+    return Boolean(layer && layer.visible !== false && layer.locked !== true && layer.type !== 'paint-effect');
   }
 
   attachSurfaceSprite(layer, sprite) {
@@ -562,5 +582,69 @@ export class BrushTool {
     if (layerState?.texture?.source?.update) {
       layerState.texture.source.update();
     }
+  }
+
+  getLayerStrokeBounds(layerId) {
+    const strokes = this.getLayerState(layerId).strokes;
+
+    if (!strokes.length) {
+      return null;
+    }
+
+    let minX = Number.POSITIVE_INFINITY;
+    let minY = Number.POSITIVE_INFINITY;
+    let maxX = Number.NEGATIVE_INFINITY;
+    let maxY = Number.NEGATIVE_INFINITY;
+
+    for (const stroke of strokes) {
+      const radius = Math.max(1, Number(stroke.width) || 1) / 2;
+
+      for (const point of stroke.points ?? []) {
+        minX = Math.min(minX, point.x - radius);
+        minY = Math.min(minY, point.y - radius);
+        maxX = Math.max(maxX, point.x + radius);
+        maxY = Math.max(maxY, point.y + radius);
+      }
+    }
+
+    if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {
+      return null;
+    }
+
+    return {
+      x: minX,
+      y: minY,
+      width: Math.max(1, maxX - minX),
+      height: Math.max(1, maxY - minY),
+    };
+  }
+
+  layerHasVisibleContent(layerId) {
+    const bounds = this.getLayerStrokeBounds(layerId);
+    return Boolean(bounds && bounds.width > 0 && bounds.height > 0);
+  }
+
+  cloneLayerStrokes(sourceLayerId, targetLayerId, offsetX = 0, offsetY = 0) {
+    const cloned = this.getLayerStrokes(sourceLayerId).map((stroke) => ({
+      ...stroke,
+      layerId: targetLayerId,
+      points: (stroke.points ?? []).map((point) => ({
+        x: point.x + offsetX,
+        y: point.y + offsetY,
+      })),
+    }));
+
+    this.restoreLayerStrokes(targetLayerId, cloned);
+    return cloned;
+  }
+
+  emitPaintChanged(layerId) {
+    if (!layerId) {
+      return;
+    }
+
+    this.eventBus.emit('layer:paint-changed', {
+      layerId,
+    });
   }
 }
