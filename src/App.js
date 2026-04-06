@@ -7,12 +7,10 @@ import { HistoryManager } from './core/HistoryManager.js';
 import { LayerManager } from './core/LayerManager.js';
 import { ViewportController } from './core/ViewportController.js';
 import { ExportManager } from './export/ExportManager.js';
-import { AiImageEditor } from './integrations/AiImageEditor.js';
 import { BackgroundRemover } from './integrations/BackgroundRemover.js';
 import { ImgurUploader } from './integrations/ImgurUploader.js';
 import { MaskEffects } from './masks/MaskEffects.js';
 import { MaskManager } from './masks/MaskManager.js';
-import { PRESET_MASKS } from './masks/maskData.js';
 import { SessionSerializer } from './session/SessionSerializer.js';
 import { SessionStorage } from './session/SessionStorage.js';
 import { MaskStorage } from './storage/MaskStorage.js';
@@ -22,8 +20,6 @@ import { BrushTool } from './tools/BrushTool.js';
 import { EraserTool } from './tools/EraserTool.js';
 import { RectTool } from './tools/RectTool.js';
 import { RegionEffectTool } from './tools/RegionEffectTool.js';
-import { PaintEffectManager } from './tools/PaintEffectManager.js';
-import { PaintEffectBrushTool } from './tools/PaintEffectBrushTool.js';
 import { CropTool } from './tools/CropTool.js';
 import { SelectTool } from './tools/SelectTool.js';
 import { TextTool } from './tools/TextTool.js';
@@ -34,12 +30,9 @@ import {
   getRegionPreviewBadge,
 } from './tools/regionDefinitions.js';
 import { KeyboardShortcuts } from './ui/KeyboardShortcuts.js';
-import { AiEditPanel } from './ui/AiEditPanel.js';
 import { BackgroundRemovalPanel } from './ui/BackgroundRemovalPanel.js';
 import { CanvasArea } from './ui/CanvasArea.js';
 import { LayerPanel } from './ui/LayerPanel.js';
-import { MaskPanel } from './ui/MaskPanel.js';
-import { SavedRoundsPanel } from './ui/SavedRoundsPanel.js';
 import { SessionPanel } from './ui/SessionPanel.js';
 import { SettingsModal } from './ui/SettingsModal.js';
 import { ShortcutsPanel } from './ui/ShortcutsPanel.js';
@@ -74,7 +67,6 @@ export class App {
     this.historyManager = null;
     this.viewportController = null;
     this.exportManager = null;
-    this.aiImageEditor = null;
     this.backgroundRemover = null;
     this.toolManager = null;
     this.keyboardShortcuts = null;
@@ -85,17 +77,12 @@ export class App {
     this.maskEffects = null;
     this.brushTool = null;
     this.eraserTool = null;
-    this.blurPaintTool = null;
-    this.pixelatePaintTool = null;
     this.rectTool = null;
     this.regionEffectTool = null;
-    this.paintEffectManager = null;
     this.cropTool = null;
     this.textTool = null;
     this.selectTool = null;
     this.toolbar = null;
-    this.maskPanel = null;
-    this.aiEditPanel = null;
     this.backgroundRemovalPanel = null;
     this.layerPanel = null;
     this.canvasArea = null;
@@ -116,9 +103,7 @@ export class App {
     this.autosaveTimeoutId = 0;
     this.isRestoringSession = false;
     this.regionCreationSeed = Math.random();
-    this.aiEditCount = 0;
     this.backgroundRemovalCount = 0;
-    this.aiEditModels = [];
     this.expandedLayerSettings = new Set();
     this.selectedPanelLayerId = null;
     this.uiStateController = null;
@@ -145,7 +130,6 @@ export class App {
     this.layerManager = new LayerManager(this.canvasEngine, this.eventBus);
     this.historyManager = new HistoryManager();
     this.exportManager = new ExportManager(this.canvasEngine);
-    this.aiImageEditor = new AiImageEditor();
     this.backgroundRemover = new BackgroundRemover();
     this.sessionSerializer = new SessionSerializer();
     this.uiStateController = new UiStateController(this);
@@ -159,7 +143,6 @@ export class App {
     this.initializeKeyboardShortcuts();
     this.initializeTheme();
     this.initializeSettings();
-    await this.initializeAiEditPanel();
     this.syncExportControlsFromPreset();
     this.renderLayerPanel();
     this.renderSessions();
@@ -175,20 +158,13 @@ export class App {
   render() {
     this.toolbar = new Toolbar();
     this.layerPanel = new LayerPanel();
-    this.maskPanel = new MaskPanel(this.maskStorage.getMasks());
     this.backgroundRemovalPanel = new BackgroundRemovalPanel();
-    this.aiEditPanel = new AiEditPanel();
     this.canvasArea = new CanvasArea();
     this.sessionPanel = new SessionPanel();
-    this.savedRoundsPanel = new SavedRoundsPanel();
     this.themePanel = new ThemePanel();
     this.shortcutsPanel = new ShortcutsPanel();
     this.settingsModal = new SettingsModal();
     this.toastManager = new ToastManager();
-
-    this.toolbar.element.appendChild(this.layerPanel.element);
-    this.toolbar.element.appendChild(this.canvasArea.refs.actionBar);
-    this.toolbar.element.appendChild(this.savedRoundsPanel.element);
 
     this.settingsButton = el('button', {
       id: 'settingsButton',
@@ -211,19 +187,25 @@ export class App {
       this.settingsButton,
       this.githubButton,
     ]);
-    this.maskPanel.element.prepend(this.chromeControls);
+
     this.settingsModal.refs.sessionsContent.appendChild(this.sessionPanel.element);
     this.settingsModal.refs.themesContent.appendChild(this.themePanel.element);
     this.settingsModal.refs.shortcutsContent.appendChild(this.shortcutsPanel.element);
 
-    const grid = el('div', { id: 'container', className: 'app-grid' }, [
-      this.toolbar.element,
-      this.canvasArea.element,
-      this.maskPanel.element,
-    ]);
+    const rightPanel = el('div', { id: 'masksDiv' }, []);
+    this.maskPanel = { element: rightPanel };
 
-    this.maskPanel.element.appendChild(this.backgroundRemovalPanel.element);
-    this.maskPanel.element.appendChild(this.aiEditPanel.element);
+    rightPanel.appendChild(this.chromeControls);
+    rightPanel.appendChild(this.toolbar.element);
+    rightPanel.appendChild(this.layerPanel.element);
+    rightPanel.appendChild(this.canvasArea.refs.actionBar);
+    rightPanel.appendChild(this.backgroundRemovalPanel.element);
+
+    const grid = el('div', { id: 'container', className: 'app-grid' }, [
+      this.toolbar.toolSelectorElement,
+      this.canvasArea.element,
+      rightPanel,
+    ]);
 
     this.appShell = el('div', {
       className: 'app-root',
@@ -253,36 +235,6 @@ export class App {
       width: Number(toolbarRefs.brushSizeInput.value),
       sharedState: drawingState,
     });
-    this.paintEffectManager = new PaintEffectManager(
-      this.canvasEngine,
-      this.layerManager,
-      this.eventBus,
-      this.brushTool
-    );
-    this.blurPaintTool = new PaintEffectBrushTool(
-      this.canvasEngine,
-      this.layerManager,
-      this.eventBus,
-      this.paintEffectManager,
-      'blur',
-      {
-        width: Number(toolbarRefs.brushSizeInput.value),
-        opacity: Number(toolbarRefs.brushOpacityInput.value) / 100,
-        sharedState: drawingState,
-      }
-    );
-    this.pixelatePaintTool = new PaintEffectBrushTool(
-      this.canvasEngine,
-      this.layerManager,
-      this.eventBus,
-      this.paintEffectManager,
-      'pixelate',
-      {
-        width: Number(toolbarRefs.brushSizeInput.value),
-        opacity: Number(toolbarRefs.brushOpacityInput.value) / 100,
-        sharedState: drawingState,
-      }
-    );
     this.rectTool = new RectTool(this.canvasEngine, this.layerManager);
     this.regionEffectTool = new RegionEffectTool(this.canvasEngine, this.layerManager, this.eventBus);
     this.cropTool = new CropTool(this.canvasEngine, this.eventBus);
@@ -298,8 +250,6 @@ export class App {
 
     this.toolManager.registerTool('brush', this.brushTool);
     this.toolManager.registerTool('eraser', this.eraserTool);
-    this.toolManager.registerTool('blur-brush', this.blurPaintTool);
-    this.toolManager.registerTool('pixelate-brush', this.pixelatePaintTool);
     this.toolManager.registerTool('region', this.regionEffectTool);
     this.toolManager.registerTool('crop', this.cropTool);
     this.toolManager.registerTool('select', this.selectTool);
@@ -311,7 +261,7 @@ export class App {
       settings: this.settings,
       historyManager: this.historyManager,
       selectTool: this.selectTool,
-      savedRoundsElement: this.savedRoundsPanel.refs.savedRounds,
+      savedRoundsElement: null,
       shouldIgnoreShortcut: () => !this.settingsModal.refs.overlay.classList.contains('hidden'),
       handlers: {
         undo: () => this.historyManager.undo(),
@@ -324,8 +274,6 @@ export class App {
         brush: () => this.toolManager.setActiveTool('brush'),
         eraser: () => this.toolManager.setActiveTool('eraser'),
         move: () => this.toolManager.setActiveTool('select'),
-        blurBrush: () => this.activatePaintEffectBrush('blur'),
-        pixelBrush: () => this.activatePaintEffectBrush('pixelate'),
         crop: () => this.startCropMode?.(),
         addRectangle: () => this.addRectangle(),
         addText: () => this.addText(),
@@ -361,38 +309,15 @@ export class App {
     this.settings.clearPointerCalibration();
   }
 
-  async initializeAiEditPanel() {
-    const savedState = this.settings.getAiEditSettings();
-    const serviceId = savedState.serviceId || 'aiStudio';
-    const sourceMode = savedState.sourceMode || 'visible-layers';
-    const prompt = savedState.prompt || '';
-    const serviceState = savedState.services?.[serviceId] ?? {};
-
-    this.aiEditPanel.refs.serviceSelect.value = serviceId;
-    this.aiEditPanel.refs.sourceSelect.value = sourceMode;
-    this.aiEditPanel.refs.promptInput.value = prompt;
-    this.aiEditPanel.refs.tokenInput.value = serviceState.token || '';
-    this.aiEditPanel.refs.customUrlInput.value = serviceState.customUrl || '';
-
-    this.updateAiEditServiceUi();
-    await this.loadAiEditModels({
-      preferredModel: serviceState.model || '',
-      announceErrors: false,
-    });
-  }
-
   bindEvents() {
     this.bindThemeEvents();
     this.bindToolEvents();
     this.bindLayerPanelEvents();
-    this.bindMaskEvents();
     this.bindBackgroundRemovalEvents();
-    this.bindAiEditEvents();
     this.bindImageLoadingEvents();
     this.bindCanvasActions();
     this.bindViewportEvents();
     this.bindSessionEvents();
-    this.bindSavedRoundEvents();
     this.bindSettingsEvents();
     this.bindShortcutEvents();
     this.bindAppEvents();
@@ -515,14 +440,6 @@ export class App {
       this.toolManager.setActiveTool('eraser');
     });
 
-    refs.blurBrushButton.addEventListener('click', () => {
-      this.activatePaintEffectBrush('blur');
-    });
-
-    refs.pixelateBrushButton.addEventListener('click', () => {
-      this.activatePaintEffectBrush('pixelate');
-    });
-
     refs.moveButton.addEventListener('click', () => {
       this.toolManager.setActiveTool('select');
     });
@@ -559,8 +476,6 @@ export class App {
       const width = Number(event.target.value);
       this.brushTool.setWidth(width);
       this.eraserTool.setWidth(width);
-      this.blurPaintTool.setWidth(width);
-      this.pixelatePaintTool.setWidth(width);
     });
 
     refs.brushColorInput.addEventListener('input', (event) => {
@@ -574,130 +489,10 @@ export class App {
     refs.brushOpacityInput.addEventListener('input', (event) => {
       const opacity = Number(event.target.value) / 100;
       this.brushTool.setOpacity(opacity);
-      this.blurPaintTool.setOpacity(opacity);
-      this.pixelatePaintTool.setOpacity(opacity);
-
-      const activeLayer = this.layerManager.getActiveLayer();
-      if (activeLayer?.type === 'paint-effect') {
-        this.paintEffectManager.updateLayerEffect(activeLayer.id, {
-          opacity,
-        });
-      }
-    });
-
-    refs.paintEffectAmountInput.addEventListener('input', (event) => {
-      const activeLayer = this.layerManager.getActiveLayer();
-
-      if (activeLayer?.type === 'paint-effect') {
-        this.paintEffectManager.updateLayerEffect(activeLayer.id, {
-          amount: Number(event.target.value),
-        });
-        this.renderLayerPanel();
-      }
     });
 
     refs.undoButton.addEventListener('click', () => {
       this.historyManager.undo();
-    });
-
-    refs.hueInput.addEventListener('input', (event) => {
-      this.maskEffects.updateHue(event.target.value);
-    });
-
-    refs.invertButton.addEventListener('click', () => {
-      const beforeState = this.maskEffects.snapshotCurrentMask();
-
-      if (!beforeState) {
-        return;
-      }
-
-      const isActive = !refs.invertButton.classList.contains('is-active');
-      refs.invertButton.classList.toggle('is-active', isActive);
-      this.maskEffects.setEffectEnabled('invert', isActive);
-      this.commitMaskHistory('Toggle mask invert', beforeState);
-    });
-
-    refs.maskBlurButton.addEventListener('click', () => {
-      const beforeState = this.maskEffects.snapshotCurrentMask();
-
-      if (!beforeState) {
-        return;
-      }
-
-      const isActive = !refs.maskBlurButton.classList.contains('is-active');
-      refs.maskBlurButton.classList.toggle('is-active', isActive);
-
-      if (isActive && Number(refs.maskBlurInput.value) === 0) {
-        refs.maskBlurInput.value = '4';
-      }
-
-      this.maskEffects.updateEffect('blur', {
-        enabled: isActive,
-        strength: Number(refs.maskBlurInput.value),
-      });
-      this.commitMaskHistory('Toggle mask blur', beforeState);
-    });
-
-    refs.maskNoiseButton.addEventListener('click', () => {
-      const beforeState = this.maskEffects.snapshotCurrentMask();
-
-      if (!beforeState) {
-        return;
-      }
-
-      const isActive = !refs.maskNoiseButton.classList.contains('is-active');
-      refs.maskNoiseButton.classList.toggle('is-active', isActive);
-
-      if (isActive && Number(refs.maskNoiseInput.value) === 0) {
-        refs.maskNoiseInput.value = '12';
-      }
-
-      this.maskEffects.updateEffect('noiseWarp', {
-        enabled: isActive,
-        noise: Number(refs.maskNoiseInput.value) / 100,
-      });
-      this.commitMaskHistory('Toggle mask noise', beforeState);
-    });
-
-    refs.maskDisplacementButton.addEventListener('click', () => {
-      const beforeState = this.maskEffects.snapshotCurrentMask();
-
-      if (!beforeState) {
-        return;
-      }
-
-      const isActive = !refs.maskDisplacementButton.classList.contains('is-active');
-      refs.maskDisplacementButton.classList.toggle('is-active', isActive);
-
-      if (isActive && Number(refs.maskDisplacementInput.value) === 0) {
-        refs.maskDisplacementInput.value = '18';
-      }
-
-      this.maskEffects.updateEffect('displacement', {
-        enabled: isActive,
-        strength: Number(refs.maskDisplacementInput.value),
-      });
-      this.commitMaskHistory('Toggle mask warp', beforeState);
-    });
-
-    refs.maskDisplacementReseedButton.addEventListener('click', () => {
-      const beforeState = this.maskEffects.snapshotCurrentMask();
-
-      if (!beforeState) {
-        return;
-      }
-
-      refs.maskDisplacementButton.classList.add('is-active');
-      if (Number(refs.maskDisplacementInput.value) === 0) {
-        refs.maskDisplacementInput.value = '18';
-      }
-
-      this.maskEffects.updateEffect('displacement', {
-        enabled: true,
-        strength: Number(refs.maskDisplacementInput.value),
-        seed: Math.random(),
-      });
-      this.commitMaskHistory('Reseed mask warp', beforeState);
     });
 
     refs.addTextButton.addEventListener('click', () => {
@@ -792,54 +587,6 @@ export class App {
 
     this.bindTextHistorySlider(refs.textShadowDistanceInput, (event) => {
       this.applySelectedTextStyle({ dropShadowDistance: Number(event.target.value) }, false);
-    });
-
-    this.bindMaskHistorySlider(refs.alphaInput, (event) => {
-      refs.alphaValue.textContent = event.target.value;
-      this.maskEffects.updateOpacity(event.target.value);
-    }, 'Update mask opacity');
-
-    this.bindMaskHistorySlider(refs.zoomInput, (event) => {
-      this.maskEffects.updateZoom(event.target.value);
-    }, 'Update mask zoom');
-
-    this.bindMaskHistorySlider(refs.angleInput, (event) => {
-      this.maskEffects.rotateMask(event.target.value);
-    }, 'Rotate mask');
-
-    this.bindMaskHistorySlider(refs.hueInput, (event) => {
-      this.maskEffects.updateHue(event.target.value);
-    }, 'Update mask hue');
-
-    this.bindMaskHistorySlider(refs.maskBlurInput, (event) => {
-      const strength = Number(event.target.value);
-      refs.maskBlurButton.classList.toggle('is-active', strength > 0);
-      this.maskEffects.updateEffect('blur', {
-        enabled: strength > 0,
-        strength,
-      });
-    }, 'Update mask blur');
-
-    this.bindMaskHistorySlider(refs.maskNoiseInput, (event) => {
-      const noiseAmount = Number(event.target.value);
-      refs.maskNoiseButton.classList.toggle('is-active', noiseAmount > 0);
-      this.maskEffects.updateEffect('noiseWarp', {
-        enabled: noiseAmount > 0,
-        noise: noiseAmount / 100,
-      });
-    }, 'Update mask noise');
-
-    this.bindMaskHistorySlider(refs.maskDisplacementInput, (event) => {
-      const strength = Number(event.target.value);
-      refs.maskDisplacementButton.classList.toggle('is-active', strength > 0);
-      this.maskEffects.updateEffect('displacement', {
-        enabled: strength > 0,
-        strength,
-      });
-    }, 'Update mask warp');
-
-    refs.alphaInput.addEventListener('input', (event) => {
-      refs.alphaValue.textContent = event.target.value;
     });
   }
 
@@ -1049,197 +796,10 @@ export class App {
     });
   }
 
-  bindMaskEvents() {
-    this.maskPanel.refs.countrySelect.addEventListener('change', async (event) => {
-      if (!event.target.value) {
-        return;
-      }
-
-      await this.maskManager.loadMask(event.target.value, 75, 'country', 25, false);
-    });
-
-    this.maskPanel.refs.presetButtons.forEach((button) => {
-      const maskId = Number(button.dataset.maskId);
-      button.addEventListener('click', async () => {
-        const preset = this.findPreset(maskId);
-        await this.maskManager.loadMask(preset.full, preset.defaultAlpha, 'preset');
-      });
-    });
-
-    this.maskPanel.refs.addMaskButton.addEventListener('click', () => {
-      const url = this.maskPanel.refs.customMaskInput.value.trim();
-
-      if (!url) {
-        this.maskPanel.setMessage('Enter a mask URL first.', 'warning');
-        this.maskPanel.refs.customMaskInput.focus();
-        return;
-      }
-
-      this.maskStorage.addMask(url);
-      this.maskPanel.appendCustomMask(url);
-      this.bindCustomMaskButton(this.maskPanel.refs.customMaskList.lastElementChild);
-      this.maskPanel.refs.customMaskInput.value = '';
-      this.maskPanel.setMessage('Custom mask saved for reuse.', 'success');
-      this.notify('Custom mask saved.', 'success');
-    });
-
-    this.maskPanel.refs.clearMasksButton.addEventListener('click', () => {
-      this.maskStorage.clearAll();
-      this.maskPanel.renderCustomMasks([]);
-      this.maskPanel.setMessage('All custom masks were removed.', 'info');
-      this.notify('Custom masks cleared.', 'success');
-    });
-
-    this.maskPanel.refs.customMaskInput.addEventListener('input', () => {
-      this.maskPanel.setMessage('');
-    });
-
-    [...this.maskPanel.refs.customMaskList.children].forEach((button) => {
-      this.bindCustomMaskButton(button);
-    });
-  }
-
   bindBackgroundRemovalEvents() {
     this.backgroundRemovalPanel.refs.button.addEventListener('click', async () => {
       await this.removeBackgroundFromCurrentTarget();
     });
-  }
-
-  bindAiEditEvents() {
-    const refs = this.aiEditPanel.refs;
-
-    refs.serviceSelect.addEventListener('change', async () => {
-      const serviceState = this.getAiEditServiceState(refs.serviceSelect.value);
-
-      refs.tokenInput.value = serviceState.token || '';
-      refs.customUrlInput.value = serviceState.customUrl || '';
-      this.updateAiEditServiceUi();
-      this.persistAiEditSettings();
-      await this.loadAiEditModels({
-        preferredModel: serviceState.model || '',
-      });
-    });
-
-    refs.sourceSelect.addEventListener('change', () => {
-      this.persistAiEditSettings();
-    });
-
-    refs.promptInput.addEventListener('input', () => {
-      this.aiEditPanel.setMessage('');
-      this.persistAiEditSettings();
-    });
-
-    refs.tokenInput.addEventListener('change', async () => {
-      this.persistAiEditSettings();
-
-      if (refs.serviceSelect.value !== 'comfyUi') {
-        await this.loadAiEditModels({
-          preferredModel: this.getAiEditServiceState(refs.serviceSelect.value).model || refs.modelSelect.value,
-          announceErrors: false,
-        });
-      }
-    });
-
-    refs.customUrlInput.addEventListener('change', async () => {
-      this.persistAiEditSettings();
-
-      if (refs.serviceSelect.value === 'comfyUi') {
-        await this.loadAiEditModels({
-          preferredModel: this.getAiEditServiceState(refs.serviceSelect.value).model || refs.modelSelect.value,
-        });
-      }
-    });
-
-    refs.modelSelect.addEventListener('change', () => {
-      this.persistAiEditSettings();
-    });
-
-    refs.refreshModelsButton.addEventListener('click', async () => {
-      await this.loadAiEditModels({
-        preferredModel: refs.modelSelect.value,
-      });
-    });
-
-    refs.generateButton.addEventListener('click', async () => {
-      await this.generateAiEditedLayer();
-    });
-  }
-
-  updateAiEditServiceUi() {
-    const refs = this.aiEditPanel.refs;
-    const serviceId = refs.serviceSelect.value;
-    const definition = this.aiImageEditor.getServiceDefinition(serviceId);
-
-    this.aiEditPanel.setServiceMeta(definition);
-  }
-
-  getAiEditSettings() {
-    const stored = this.settings.getAiEditSettings();
-
-    return stored && typeof stored === 'object'
-      ? stored
-      : {
-          serviceId: 'aiStudio',
-          sourceMode: 'visible-layers',
-          prompt: '',
-          services: {},
-        };
-  }
-
-  getAiEditServiceState(serviceId) {
-    const settings = this.getAiEditSettings();
-    return settings.services?.[serviceId] ?? {};
-  }
-
-  persistAiEditSettings() {
-    const refs = this.aiEditPanel.refs;
-    const current = this.getAiEditSettings();
-    const serviceId = refs.serviceSelect.value;
-    const services = {
-      ...(current.services ?? {}),
-      [serviceId]: {
-        ...(current.services?.[serviceId] ?? {}),
-        token: refs.tokenInput.value.trim(),
-        customUrl: refs.customUrlInput.value.trim(),
-        model: refs.modelSelect.value,
-      },
-    };
-
-    this.settings.setAiEditSettings({
-      ...current,
-      serviceId,
-      sourceMode: refs.sourceSelect.value,
-      prompt: refs.promptInput.value,
-      services,
-    });
-  }
-
-  async loadAiEditModels({ preferredModel = '', announceErrors = true } = {}) {
-    const refs = this.aiEditPanel.refs;
-    const serviceId = refs.serviceSelect.value;
-
-    refs.refreshModelsButton.disabled = true;
-    this.aiEditPanel.setMessage('');
-
-    try {
-      this.aiEditModels = await this.aiImageEditor.listModels({
-        serviceId,
-        token: refs.tokenInput.value.trim(),
-        customUrl: refs.customUrlInput.value.trim(),
-      });
-      this.aiEditPanel.setModels(this.aiEditModels, preferredModel);
-      this.persistAiEditSettings();
-    } catch (error) {
-      this.aiEditModels = [];
-      this.aiEditPanel.setModels([], '');
-      this.aiEditPanel.setMessage(error.message, 'error');
-
-      if (announceErrors) {
-        this.notify(error.message, 'error', 3600);
-      }
-    } finally {
-      refs.refreshModelsButton.disabled = false;
-    }
   }
 
   bindImageLoadingEvents() {
@@ -1566,16 +1126,11 @@ export class App {
     this.eventBus.on('tool:changed', ({ name }) => {
       this.toolbar.refs.brushButton.classList.toggle('is-active', name === 'brush');
       this.toolbar.refs.eraserButton.classList.toggle('is-active', name === 'eraser');
-      this.toolbar.refs.blurBrushButton.classList.toggle('is-active', name === 'blur-brush');
-      this.toolbar.refs.pixelateBrushButton.classList.toggle('is-active', name === 'pixelate-brush');
       this.toolbar.refs.moveButton.classList.toggle('is-active', name === 'select');
       this.toolbar.refs.cropButton.classList.toggle('is-active', name === 'crop');
       this.toolbar.refs.addRegionButton.classList.toggle('is-active', name === 'region');
-      this.toolbar.refs.paintEffectAmountField.hidden = !['blur-brush', 'pixelate-brush'].includes(name);
+      this.toolbar.refs.paintEffectAmountField.hidden = true;
       this.toolbar.refs.cropActionRow.hidden = name !== 'crop';
-      if (['blur-brush', 'pixelate-brush'].includes(name)) {
-        this.syncPaintEffectControls();
-      }
       this.renderLayerPanel();
       this.updateWorkflowStatus();
     });
@@ -1597,21 +1152,6 @@ export class App {
     this.eventBus.on('viewport:changed', ({ scale }) => {
       this.canvasArea.refs.zoomLabel.textContent = `${Math.round(scale * 100)}%`;
     });
-  }
-
-  bindCustomMaskButton(button) {
-    if (!button) {
-      return;
-    }
-
-    button.addEventListener('click', async () => {
-      const url = button.dataset.customMaskUrl;
-      await this.maskManager.loadMask(url, 60, 'custom');
-    });
-  }
-
-  findPreset(maskId) {
-    return PRESET_MASKS.find((mask) => mask.id === maskId) ?? null;
   }
 
   hideIntroButtons() {
@@ -1732,8 +1272,6 @@ export class App {
       [this.toolbar.refs.brushButton, this.keyboardShortcuts.getBinding('brush')],
       [this.toolbar.refs.eraserButton, this.keyboardShortcuts.getBinding('eraser')],
       [this.toolbar.refs.moveButton, this.keyboardShortcuts.getBinding('move')],
-      [this.toolbar.refs.blurBrushButton, this.keyboardShortcuts.getBinding('blurBrush')],
-      [this.toolbar.refs.pixelateBrushButton, this.keyboardShortcuts.getBinding('pixelBrush')],
       [this.toolbar.refs.cropButton, this.keyboardShortcuts.getBinding('crop')],
       [this.toolbar.refs.addRectangleButton, this.keyboardShortcuts.getBinding('addRectangle')],
       [this.toolbar.refs.addTextButton, this.keyboardShortcuts.getBinding('addText')],
@@ -2059,26 +1597,7 @@ export class App {
   }
 
   syncMaskControlsFromState(state = null) {
-    const refs = this.toolbar.refs;
-    const effects = new Map((state?.effects ?? []).map((effect) => [effect.type, effect]));
-    const hueEffect = effects.get('hue');
-    const invertEffect = effects.get('invert');
-    const blurEffect = effects.get('blur');
-    const noiseEffect = effects.get('noiseWarp');
-    const displacementEffect = effects.get('displacement');
-
-    refs.alphaInput.value = String(Math.round((state?.alpha ?? 0.75) * 100));
-    refs.alphaValue.textContent = refs.alphaInput.value;
-    refs.zoomInput.value = String(state?.zoomValue ?? 50);
-    refs.angleInput.value = String(this.normalizeAngleDegrees((state?.rotation ?? 0) * (180 / Math.PI)));
-    refs.hueInput.value = String(hueEffect?.value ?? state?.hueValue ?? 0);
-    refs.invertButton.classList.toggle('is-active', Boolean(invertEffect?.enabled ?? state?.invertEnabled));
-    refs.maskBlurInput.value = String(Math.round(blurEffect?.strength ?? 0));
-    refs.maskBlurButton.classList.toggle('is-active', Boolean(blurEffect?.enabled && (blurEffect?.strength ?? 0) > 0));
-    refs.maskNoiseInput.value = String(Math.round((noiseEffect?.noise ?? 0) * 100));
-    refs.maskNoiseButton.classList.toggle('is-active', Boolean(noiseEffect?.enabled && (noiseEffect?.noise ?? 0) > 0));
-    refs.maskDisplacementInput.value = String(Math.round(displacementEffect?.strength ?? 0));
-    refs.maskDisplacementButton.classList.toggle('is-active', Boolean(displacementEffect?.enabled && (displacementEffect?.strength ?? 0) > 0));
+    return;
   }
 
   addRectangle() {
@@ -2094,58 +1613,19 @@ export class App {
     this.recordLayerAdded(result.layer);
   }
 
-  activatePaintEffectBrush(effectType) {
-    const amount = Number(this.toolbar.refs.paintEffectAmountInput.value);
-    const opacity = Number(this.toolbar.refs.brushOpacityInput.value) / 100;
-    const layer = this.paintEffectManager.ensureActiveEffectLayer(effectType, {
-      amount,
-      opacity,
-    });
-
-    this.layerManager.setActiveLayer(layer.id);
-    this.selectTool.selectLayer(layer, this.selectTool.getPrimaryLayerObject(layer));
-    this.toolManager.setActiveTool(effectType === 'pixelate' ? 'pixelate-brush' : 'blur-brush');
-    this.syncPaintEffectControls();
-  }
-
-  syncPaintEffectControls() {
-    const activeLayer = this.layerManager.getActiveLayer();
-    const effect = activeLayer?.paintEffect ?? null;
-
-    if (!effect) {
-      this.toolbar.refs.paintEffectAmountInput.value = '12';
-      return;
-    }
-
-    this.toolbar.refs.paintEffectAmountInput.value = String(Math.round(effect.amount ?? 12));
-    this.toolbar.refs.brushOpacityInput.value = String(Math.round((effect.opacity ?? 1) * 100));
-  }
-
   adjustBrushSize(delta) {
     const input = this.toolbar.refs.brushSizeInput;
     const nextWidth = Math.max(1, Math.min(50, Number(input.value) + delta));
     input.value = String(nextWidth);
     this.brushTool.setWidth(nextWidth);
     this.eraserTool.setWidth(nextWidth);
-    this.blurPaintTool.setWidth(nextWidth);
-    this.pixelatePaintTool.setWidth(nextWidth);
   }
 
   handleContextLeftShortcut() {
-    if (this.savedRoundsPanel.refs.savedRounds && !this.savedRoundsPanel.refs.savedRounds.classList.contains('hidden')) {
-      this.displaySavedRounds(1);
-      return;
-    }
-
     this.adjustMaskRotationByDelta(-2);
   }
 
   handleContextRightShortcut() {
-    if (this.savedRoundsPanel.refs.savedRounds && !this.savedRoundsPanel.refs.savedRounds.classList.contains('hidden')) {
-      this.displaySavedRounds(2);
-      return;
-    }
-
     this.adjustMaskRotationByDelta(2);
   }
 
@@ -3116,120 +2596,6 @@ export class App {
     return 'Removing background';
   }
 
-  async generateAiEditedLayer() {
-    if (!this.canvasEngine?.backgroundSprite) {
-      this.aiEditPanel.setMessage('Load an image before using AI editing.', 'warning');
-      this.notify('Load an image before using AI editing.', 'warning');
-      return;
-    }
-
-    const refs = this.aiEditPanel.refs;
-    const serviceId = refs.serviceSelect.value;
-    const modelId = refs.modelSelect.value;
-    const sourceMode = refs.sourceSelect.value;
-    const prompt = refs.promptInput.value.trim();
-
-    if (!modelId) {
-      this.aiEditPanel.setMessage('Select a model first.', 'warning');
-      return;
-    }
-
-    this.aiEditPanel.setBusy(true, 'Generating');
-    this.aiEditPanel.setMessage('');
-
-    try {
-      const source = await this.captureAiEditSource(sourceMode);
-      const result = await this.aiImageEditor.editImage({
-        serviceId,
-        modelId,
-        prompt,
-        token: refs.tokenInput.value.trim(),
-        customUrl: refs.customUrlInput.value.trim(),
-        imageDataUrl: source.imageDataUrl,
-        mimeType: source.mimeType,
-      });
-      const inserted = await this.createGeneratedImageLayer({
-        result,
-        documentRect: source.documentRect,
-        name: `AI Edit ${++this.aiEditCount}`,
-        metadata: {
-          serviceId,
-          modelId,
-          prompt,
-          sourceMode,
-        },
-      });
-
-      this.toolManager.setActiveTool('select');
-      this.selectTool.selectLayer(inserted.layer, inserted.sprite);
-      this.recordLayerAdded(inserted.layer);
-      this.persistAiEditSettings();
-      this.aiEditPanel.setMessage('Edited layer generated.', 'success');
-      this.notify('AI edit completed.', 'success');
-    } catch (error) {
-      this.aiEditPanel.setMessage(error.message, 'error');
-      this.notify(error.message, 'error', 4200);
-    } finally {
-      this.aiEditPanel.setBusy(false);
-    }
-  }
-
-  async captureAiEditSource(sourceMode) {
-    const fullCanvasRect = {
-      x: 0,
-      y: 0,
-      width: this.canvasEngine.canvasWidth,
-      height: this.canvasEngine.canvasHeight,
-    };
-    let documentRect = fullCanvasRect;
-    let isolateLayerId = null;
-
-    if (sourceMode === 'selected-layer') {
-      const layer = this.selectTool.getSelectedLayer();
-      const object = this.selectTool.getSelectedObject();
-
-      if (!layer || !object || layer.type === 'drawing') {
-        throw new Error('Select a non-drawing layer first.');
-      }
-
-      isolateLayerId = layer.id;
-      documentRect = this.globalBoundsToDocumentRect(object.getBounds());
-    }
-
-    if (sourceMode === 'selection-bounds') {
-      const selectedObjects = this.selectTool.getSelectedObjects();
-
-      if (!selectedObjects.length) {
-        throw new Error('Select something on the canvas to use selection bounds.');
-      }
-
-      documentRect = this.globalBoundsToDocumentRect(this.selectTool.getSelectionBounds());
-    }
-
-    const clampedRect = this.clampDocumentRect(documentRect);
-
-    if (!clampedRect.width || !clampedRect.height) {
-      throw new Error('The selected source area is empty.');
-    }
-
-    const fullDataUrl = await this.captureEditorComposite({
-      isolateLayerId,
-    });
-    const imageDataUrl =
-      clampedRect.width === fullCanvasRect.width &&
-      clampedRect.height === fullCanvasRect.height &&
-      clampedRect.x === 0 &&
-      clampedRect.y === 0
-        ? fullDataUrl
-        : await this.cropDataUrlToRect(fullDataUrl, clampedRect);
-
-    return {
-      imageDataUrl,
-      mimeType: 'image/png',
-      documentRect: clampedRect,
-    };
-  }
-
   async captureEditorComposite({ isolateLayerId = null } = {}) {
     const backgroundVisible = this.canvasEngine.backgroundSprite?.visible !== false;
     const layerVisibility = this.layerManager.getLayers().map((layer) => ({
@@ -3581,7 +2947,7 @@ export class App {
       this.selectTool.clearSelection();
     }
 
-    if (!['brush', 'eraser', 'blur-brush', 'pixelate-brush'].includes(activeToolName)) {
+    if (!['brush', 'eraser'].includes(activeToolName)) {
       this.toolManager.setActiveTool('select');
     }
 

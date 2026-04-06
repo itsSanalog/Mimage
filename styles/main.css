@@ -8,8 +8,8 @@
 @import './mobile.css';
 
 :root {
-  --tools-column-width: 300px;
-  --masks-column-width: 260px;
+  --tools-column-width: 110px;
+  --masks-column-width: 290px;
   --bg-primary: rgb(240, 236, 228);
   --bg-panel: rgb(247, 229, 205);
   --bg-button: rgb(236, 140, 116);
@@ -151,7 +151,6 @@ textarea::placeholder {
 #toolsDiv {
   grid-area: toolsDiv;
   min-height: 0;
-  overflow-y: auto;
 }
 
 #preview {
@@ -164,6 +163,13 @@ textarea::placeholder {
 #masksDiv {
   grid-area: masksDiv;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+}
+
+#toolOptions {
   overflow-y: auto;
 }
 
