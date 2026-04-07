@@ -16,12 +16,12 @@ export class Toolbar {
     const compactLayout = this.isCompactLayout();
 
     this.refs.eraserButton = this.button('eraserButton', 'Eraser');
-    this.refs.brushButton = this.button('brushButton', 'Brush mode', 'is-active');
-    this.refs.moveButton = this.button('disableDrawing', 'Move mode');
-    this.refs.cropButton = this.button('cropButton', 'Crop / Resize');
-    this.refs.applyCropButton = this.button('applyCropButton', 'Apply resize');
-    this.refs.cancelCropButton = this.button('cancelCropButton', 'Cancel resize');
-    this.refs.addRectangleButton = this.button('addRectangle', 'Add rectangle');
+    this.refs.brushButton = this.button('brushButton', 'Brush', 'is-active');
+    this.refs.moveButton = this.button('disableDrawing', 'Move');
+    this.refs.cropButton = this.button('cropButton', 'Crop');
+    this.refs.applyCropButton = this.button('applyCropButton', 'Apply');
+    this.refs.cancelCropButton = this.button('cancelCropButton', 'Cancel');
+    this.refs.addRectangleButton = this.button('addRectangle', 'Rectangle');
     this.refs.duplicateButton = this.button('dupeMask', 'Duplicate');
     this.refs.deleteButton = this.button('deleteObject', 'Delete');
     this.refs.undoButton = this.button('undo', 'Undo');
@@ -40,7 +40,7 @@ export class Toolbar {
     ]);
     this.refs.brushOpacityInput = this.slider('brushOpacity', 0, 100, 100, { 'aria-label': 'Brush opacity' });
     this.refs.paintEffectAmountInput = this.slider('paintEffectAmount', 1, 40, 12, { 'aria-label': 'Paint effect amount' });
-    this.refs.addRegionButton = this.button('addRegion', 'Add region');
+    this.refs.addRegionButton = this.button('addRegion', 'Region');
     this.refs.regionShapeSelect = el('select', { id: 'regionShapeSelect', 'aria-label': 'Region shape' }, REGION_SHAPE_OPTIONS.map((shape) =>
       el('option', { value: shape.value, textContent: shape.label })
     ));
@@ -97,7 +97,7 @@ export class Toolbar {
     });
     this.refs.textShadowBlurInput = this.slider('textShadowBlur', 0, 20, 4, { 'aria-label': 'Text shadow blur' });
     this.refs.textShadowDistanceInput = this.slider('textShadowDistance', 0, 20, 6, { 'aria-label': 'Text shadow distance' });
-    this.refs.addTextButton = this.button('addText', 'Add text');
+    this.refs.addTextButton = this.button('addText', 'Text');
 
     this.toolSelectorElement = el('div', { id: 'toolsDiv' }, [
       el('fieldset', { className: 'panel-fieldset tool-selector-panel' }, [

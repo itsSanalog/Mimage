@@ -115,6 +115,10 @@ textarea::placeholder {
   color: var(--text-placeholder);
 }
 
+legend {
+  font-weight: bold;
+}
+
 .app-root {
   position: relative;
   display: flex;
@@ -246,6 +250,7 @@ textarea::placeholder {
 #toolsDiv {
   grid-area: toolsDiv;
   min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
 }
 
@@ -272,10 +277,16 @@ textarea::placeholder {
 .panel-fieldset {
   margin: 0;
   border: none;
-  border-radius: 0;
+  border-radius: 8px;
   background: var(--bg-panel);
   color: var(--text-primary);
   box-shadow: none;
+}
+
+.panel-fieldset .app-button {
+  border-radius: 0;
+  width: 100%;
+  /* justify-content: center; */
 }
 
 .app-button,
@@ -290,7 +301,7 @@ textarea::placeholder {
 .app-button {
   border: none;
   min-height: 30px;
-  border-radius: 0;
+  border-radius: 999px;
   padding: 4px 8px;
   background: var(--bg-button);
   color: var(--text-button);

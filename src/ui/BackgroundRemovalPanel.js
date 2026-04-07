@@ -11,7 +11,7 @@ export class BackgroundRemovalPanel {
       id: 'backgroundRemoveButton',
       type: 'button',
       className: 'app-button',
-      textContent: 'Remove background',
+      textContent: 'Remove',
     });
 
     this.refs.progress = el('div', {
@@ -31,7 +31,7 @@ export class BackgroundRemovalPanel {
     });
 
     this.refs.root = el('fieldset', { id: 'backgroundRemovalPanel', className: 'panel-fieldset' }, [
-      el('legend', { textContent: 'Background Removal' }),
+      el('legend', { textContent: 'Remove BG' }),
       el('div', { className: 'button-row' }, [this.refs.button]),
       this.refs.progress,
       this.refs.message,
@@ -43,7 +43,7 @@ export class BackgroundRemovalPanel {
   setBusy(isBusy, message = 'Removing background') {
     this.refs.root.classList.toggle('is-busy', isBusy);
     this.refs.button.disabled = isBusy;
-    this.refs.button.textContent = isBusy ? 'Removing...' : 'Remove background';
+    this.refs.button.textContent = isBusy ? 'Removing...' : 'Remove';
     this.refs.progress.classList.toggle('hidden', !isBusy);
     this.refs.progress.querySelector('.ai-edit-progress-label').textContent = message;
   }

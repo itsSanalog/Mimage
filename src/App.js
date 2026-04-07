@@ -567,7 +567,7 @@ export class App {
     });
 
     this.githubButton.addEventListener('click', () => {
-      window.open('https://github.com/ImageMasker/ImageMasker.github.io');
+      window.open('https://github.com/itsSanalog/Imagemasker');
     });
   }
 

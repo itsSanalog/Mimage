@@ -60,23 +60,11 @@ const BUILTIN_THEMES = [
           linear-gradient(180deg, rgb(250, 247, 242) 0%, rgb(245, 240, 232) 100%);
       }
 
-      .panel-fieldset,
-      .settings-modal {
-        border-radius: 18px;
-      }
-
       .tool-section,
       .panel-inline-message,
       .panel-empty-state,
       .settings-tab-list {
         background: rgba(255, 252, 247, 0.52);
-      }
-
-      .app-button,
-      #settingsButton,
-      #github,
-      .settings-tab-button {
-        border-radius: 999px;
       }
     `,
   },
@@ -123,23 +111,11 @@ const BUILTIN_THEMES = [
           linear-gradient(180deg, rgb(42, 40, 36) 0%, rgb(36, 34, 30) 100%);
       }
 
-      .panel-fieldset,
-      .settings-modal {
-        border-radius: 18px;
-      }
-
       :root.dark .tool-section,
       :root.dark .panel-inline-message,
       :root.dark .panel-empty-state,
       :root.dark .settings-tab-list {
         background: rgba(255, 248, 238, 0.05);
-      }
-
-      .app-button,
-      #settingsButton,
-      #github,
-      .settings-tab-button {
-        border-radius: 999px;
       }
     `,
   },
