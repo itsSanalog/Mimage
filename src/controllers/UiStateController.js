@@ -4,8 +4,7 @@ export class UiStateController {
   }
 
   hideIntroButtons() {
-    this.app.savedRoundsPanel.refs.savedRoundsButton.classList.add('hidden');
-    this.app.savedRoundsPanel.refs.saveFromUrlButton.classList.add('hidden');
+    // Saved rounds panel has been removed; nothing to hide here.
   }
 
   applyImageLoadedUiState() {

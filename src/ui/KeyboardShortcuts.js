@@ -7,8 +7,6 @@ export const SHORTCUT_COMMANDS = [
   { id: 'brush', label: 'Brush mode', category: 'Tools', defaultBinding: 'B' },
   { id: 'eraser', label: 'Eraser', category: 'Tools', defaultBinding: 'E' },
   { id: 'move', label: 'Move mode', category: 'Tools', defaultBinding: 'V' },
-  { id: 'blurBrush', label: 'Blur brush', category: 'Tools', defaultBinding: 'G' },
-  { id: 'pixelBrush', label: 'Pixel brush', category: 'Tools', defaultBinding: 'X' },
   { id: 'crop', label: 'Crop / Resize', category: 'Tools', defaultBinding: 'C' },
   { id: 'addRectangle', label: 'Add rectangle', category: 'Insert', defaultBinding: 'R' },
   { id: 'addText', label: 'Add text', category: 'Insert', defaultBinding: 'T' },

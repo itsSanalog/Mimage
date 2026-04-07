@@ -156,3 +156,28 @@
   padding: 0 2px;
   font-size: 0.78rem;
 }
+
+.tool-selector-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+}
+
+.tool-selector-panel .app-button {
+  width: 100%;
+  justify-content: center;
+  font-size: 0.78rem;
+}
+
+.crop-action-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tool-divider {
+  border: none;
+  border-top: 1px solid var(--border-strong);
+  margin: 2px 0;
+}

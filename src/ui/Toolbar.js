@@ -7,7 +7,9 @@ import {
 export class Toolbar {
   constructor() {
     this.refs = {};
-    this.element = this.render();
+    this.element = null;
+    this.toolSelectorElement = null;
+    this.render();
   }
 
   render() {
@@ -15,8 +17,6 @@ export class Toolbar {
 
     this.refs.eraserButton = this.button('eraserButton', 'Eraser');
     this.refs.brushButton = this.button('brushButton', 'Brush mode', 'is-active');
-    this.refs.blurBrushButton = this.button('blurBrushButton', 'Blur brush');
-    this.refs.pixelateBrushButton = this.button('pixelateBrushButton', 'Pixel brush');
     this.refs.moveButton = this.button('disableDrawing', 'Move mode');
     this.refs.cropButton = this.button('cropButton', 'Crop / Resize');
     this.refs.applyCropButton = this.button('applyCropButton', 'Apply resize');
@@ -24,11 +24,7 @@ export class Toolbar {
     this.refs.addRectangleButton = this.button('addRectangle', 'Add rectangle');
     this.refs.duplicateButton = this.button('dupeMask', 'Duplicate');
     this.refs.deleteButton = this.button('deleteObject', 'Delete');
-    this.refs.alphaInput = this.slider('alpha', 0, 100, 75, { 'aria-label': 'Mask opacity' });
-    this.refs.alphaValue = el('span', { id: 'sliderValue', textContent: '75' });
-    this.refs.zoomInput = this.slider('zoom', 0, 100, 50, { 'aria-label': 'Mask zoom' });
     this.refs.undoButton = this.button('undo', 'Undo');
-    this.refs.angleInput = this.slider('angle', 0, 360, 0, { 'aria-label': 'Mask angle' });
     this.refs.brushSizeInput = this.slider('brushSize', 1, 50, 10, { 'aria-label': 'Brush size' });
     this.refs.brushColorInput = el('input', {
       id: 'colorSelect',
@@ -44,24 +40,6 @@ export class Toolbar {
     ]);
     this.refs.brushOpacityInput = this.slider('brushOpacity', 0, 100, 100, { 'aria-label': 'Brush opacity' });
     this.refs.paintEffectAmountInput = this.slider('paintEffectAmount', 1, 40, 12, { 'aria-label': 'Paint effect amount' });
-    this.refs.hueInput = el('input', {
-      id: 'hue',
-      type: 'range',
-      min: '0',
-      max: '2',
-      step: '0.002',
-      value: '0',
-      className: 'sliders',
-      'aria-label': 'Mask hue',
-    });
-    this.refs.invertButton = this.button('invert', 'Invert');
-    this.refs.maskBlurButton = this.button('maskBlurToggle', 'Blur');
-    this.refs.maskBlurInput = this.slider('maskBlur', 0, 20, 0, { 'aria-label': 'Mask blur amount' });
-    this.refs.maskNoiseButton = this.button('maskNoiseToggle', 'Noise');
-    this.refs.maskNoiseInput = this.slider('maskNoise', 0, 100, 0, { 'aria-label': 'Mask noise amount' });
-    this.refs.maskDisplacementButton = this.button('maskDisplacementToggle', 'Warp');
-    this.refs.maskDisplacementInput = this.slider('maskDisplacement', 0, 60, 0, { 'aria-label': 'Mask warp amount' });
-    this.refs.maskDisplacementReseedButton = this.button('maskDisplacementReseed', 'Reseed');
     this.refs.addRegionButton = this.button('addRegion', 'Add region');
     this.refs.regionShapeSelect = el('select', { id: 'regionShapeSelect', 'aria-label': 'Region shape' }, REGION_SHAPE_OPTIONS.map((shape) =>
       el('option', { value: shape.value, textContent: shape.label })
@@ -120,55 +98,52 @@ export class Toolbar {
     this.refs.textShadowBlurInput = this.slider('textShadowBlur', 0, 20, 4, { 'aria-label': 'Text shadow blur' });
     this.refs.textShadowDistanceInput = this.slider('textShadowDistance', 0, 20, 6, { 'aria-label': 'Text shadow distance' });
     this.refs.addTextButton = this.button('addText', 'Add text');
-    this.refs.root = el('div', { id: 'toolsDiv' }, [
-      el('fieldset', { id: 'tools', className: 'panel-fieldset' }, [
+
+    this.toolSelectorElement = el('div', { id: 'toolsDiv' }, [
+      el('fieldset', { className: 'panel-fieldset tool-selector-panel' }, [
         el('legend', { textContent: 'Tools' }),
-        this.section('Modes & Actions', [
-          this.row([this.refs.brushButton, this.refs.eraserButton, this.refs.moveButton]),
-          this.row([this.refs.blurBrushButton, this.refs.pixelateBrushButton, this.refs.cropButton]),
-          this.refs.cropActionRow = this.row([this.refs.applyCropButton, this.refs.cancelCropButton]),
-          this.row([this.refs.addRectangleButton, this.refs.addTextButton]),
-          this.row([this.refs.addRegionButton]),
-          this.row([this.refs.duplicateButton, this.refs.deleteButton, this.refs.undoButton]),
-        ], { open: true, tone: 'primary' }),
+        this.refs.brushButton,
+        this.refs.eraserButton,
+        this.refs.moveButton,
+        this.refs.cropButton,
+        this.refs.cropActionRow = el('div', { className: 'crop-action-row' }, [this.refs.applyCropButton, this.refs.cancelCropButton]),
+        this.refs.addRectangleButton,
+        this.refs.addTextButton,
+        this.refs.addRegionButton,
+        el('hr', { className: 'tool-divider' }),
+        this.refs.duplicateButton,
+        this.refs.deleteButton,
+        this.refs.undoButton,
+      ]),
+    ]);
+
+    this.element = el('div', { id: 'toolOptions' }, [
+      el('fieldset', { id: 'tools', className: 'panel-fieldset' }, [
+        el('legend', { textContent: 'Options' }),
         this.section('Brush', [
-          this.field('Brush size and color:', [this.refs.brushSizeInput, this.refs.brushColorInput]),
-          this.field('Brush type:', [this.refs.brushTypeSelect]),
-          this.field('Brush opacity:', [this.refs.brushOpacityInput]),
+          this.field('Size & color:', [this.refs.brushSizeInput, this.refs.brushColorInput]),
+          this.field('Type:', [this.refs.brushTypeSelect]),
+          this.field('Opacity:', [this.refs.brushOpacityInput]),
           this.refs.paintEffectAmountField = this.field('Effect amount:', [this.refs.paintEffectAmountInput]),
-        ], { open: !compactLayout }),
+        ], { open: true, tone: 'primary' }),
         this.section('Text', [
-          this.field('Text size and color:', [
-            this.refs.textSizeInput,
-            this.refs.textColorInput,
-            this.refs.textFontSelect,
-            this.refs.textAlignSelect,
-            this.refs.textBoldButton,
-            this.refs.textItalicButton,
-          ]),
-          this.field('Outline & shadow:', [
-            this.refs.textOutlineColorInput,
-            this.refs.textOutlineWidthInput,
-            this.refs.textShadowButton,
-            this.refs.textShadowColorInput,
-            this.refs.textShadowBlurInput,
-            this.refs.textShadowDistanceInput,
-          ]),
+          this.field('Size & color:', [this.refs.textSizeInput, this.refs.textColorInput, this.refs.textFontSelect, this.refs.textAlignSelect, this.refs.textBoldButton, this.refs.textItalicButton]),
+          this.field('Outline & shadow:', [this.refs.textOutlineColorInput, this.refs.textOutlineWidthInput, this.refs.textShadowButton, this.refs.textShadowColorInput, this.refs.textShadowBlurInput, this.refs.textShadowDistanceInput]),
         ], { open: !compactLayout }),
         this.section('Region Effects', [
-          this.refs.regionShapeField = this.field('Region shape:', [this.refs.regionShapeSelect]),
-          this.refs.regionEffectField = this.field('Region effect:', [this.refs.regionEffectSelect]),
-          this.refs.regionAmountField = this.field('Effect amount:', [this.refs.regionAmountInput]),
-          this.refs.regionRadiusField = this.field('Effect radius:', [this.refs.regionRadiusInput]),
+          this.refs.regionShapeField = this.field('Shape:', [this.refs.regionShapeSelect]),
+          this.refs.regionEffectField = this.field('Effect:', [this.refs.regionEffectSelect]),
+          this.refs.regionAmountField = this.field('Amount:', [this.refs.regionAmountInput]),
+          this.refs.regionRadiusField = this.field('Radius:', [this.refs.regionRadiusInput]),
           this.refs.regionMagnifyField = this.field('Magnify:', [this.refs.regionMagnifyInput]),
-          this.refs.regionContentRotationField = this.field('Content rotation:', [this.refs.regionContentRotationInput]),
+          this.refs.regionContentRotationField = this.field('Rotation:', [this.refs.regionContentRotationInput]),
           this.refs.regionReflectField = this.field('Reflect:', [this.refs.regionReflectXButton, this.refs.regionReflectYButton]),
           this.refs.regionReseedField = this.field('Randomize:', [this.refs.regionReseedButton]),
         ], { open: !compactLayout }),
       ]),
     ]);
 
-    return this.refs.root;
+    this.refs.root = this.element;
   }
 
   button(id, textContent, className = '', extraAttrs = {}) {
