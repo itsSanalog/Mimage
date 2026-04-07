@@ -21,7 +21,6 @@ export const SHORTCUT_COMMANDS = [
   { id: 'nudgeRight', label: 'Nudge right', category: 'Canvas', defaultBinding: 'Shift+ArrowRight' },
   { id: 'nudgeDown', label: 'Nudge down', category: 'Canvas', defaultBinding: 'Shift+ArrowDown' },
   { id: 'nudgeUp', label: 'Nudge up', category: 'Canvas', defaultBinding: 'Shift+ArrowUp' },
-  { id: 'customSubreddit', label: 'Show custom subreddit', category: 'Panels', defaultBinding: 'Insert' },
 ];
 
 const COMMAND_MAP = new Map(SHORTCUT_COMMANDS.map((command) => [command.id, command]));
@@ -37,7 +36,6 @@ export class KeyboardShortcuts {
     settings,
     historyManager,
     selectTool,
-    savedRoundsElement,
     getBindings = null,
     shouldIgnoreShortcut = null,
     handlers = {},
@@ -45,7 +43,6 @@ export class KeyboardShortcuts {
     this.settings = settings;
     this.historyManager = historyManager;
     this.selectTool = selectTool;
-    this.savedRoundsElement = savedRoundsElement;
     this.shouldIgnoreShortcut = shouldIgnoreShortcut;
     this.handlers = handlers;
     this.bindings = this.normalizeBindings(getBindings?.() ?? this.settings?.getEditorShortcuts?.() ?? {});

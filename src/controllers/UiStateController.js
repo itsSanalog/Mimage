@@ -4,7 +4,7 @@ export class UiStateController {
   }
 
   hideIntroButtons() {
-    // Saved rounds panel has been removed; nothing to hide here.
+    return;
   }
 
   applyImageLoadedUiState() {
@@ -27,16 +27,6 @@ export class UiStateController {
     refs.actualSizeButton.classList.remove('hidden');
   }
 
-  updatePostRedditButtonLabel() {
-    const refs = this.app.canvasArea.refs;
-    const isCustomVisible = !refs.subredditInput.classList.contains('hidden');
-    const subreddit = refs.subredditInput.value.trim() || 'picturegame';
-
-    refs.postRedditButton.textContent = isCustomVisible
-      ? `Submit to /r/${subreddit}`
-      : 'Submit to /r/PictureGame';
-  }
-
   applyRestoredSessionUiState() {
     const refs = this.app.canvasArea.refs;
     const hasUploadedUrl = Boolean(refs.uploadedUrl.value.trim());
@@ -46,24 +36,9 @@ export class UiStateController {
     refs.uploadedUrl.classList.toggle('hidden', !hasUploadedUrl);
     refs.copyUrlButton.classList.toggle('hidden', !hasUploadedUrl);
     refs.checkRisButton.classList.toggle('hidden', !hasUploadedUrl);
-    refs.postRedditButton.classList.toggle('hidden', !hasUploadedUrl);
     refs.roundTitle.classList.toggle('hidden', !hasUploadedUrl);
     refs.roundAnswer.classList.toggle('hidden', !hasUploadedUrl);
-    refs.saveButton.classList.toggle('hidden', !hasUploadedUrl);
     refs.exportButton.classList.toggle('hidden', !hasUploadedUrl);
-
-    if (refs.subredditInput.value.trim() && refs.subredditInput.value.trim() !== 'picturegame') {
-      refs.subredditInput.classList.remove('hidden');
-    }
-
-    this.updatePostRedditButtonLabel();
-  }
-
-  showCustomSubredditInput() {
-    const refs = this.app.canvasArea.refs;
-
-    refs.subredditInput.classList.remove('hidden');
-    this.updatePostRedditButtonLabel();
   }
 
   updateWorkflowStatus() {

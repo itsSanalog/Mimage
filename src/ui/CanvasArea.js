@@ -84,16 +84,6 @@ export class CanvasArea {
       className: 'hidden',
       'aria-label': 'Round answer',
     });
-    this.refs.postRedditButton = this.button('PostReddit', 'Submit to /r/PictureGame', true);
-    this.refs.subredditInput = el('input', {
-      id: 'newSubInput',
-      type: 'text',
-      value: 'picturegame',
-      placeholder: 'Subreddit',
-      className: 'hidden',
-      'aria-label': 'Subreddit',
-    });
-    this.refs.saveButton = this.button('Save', 'Save round', true);
     this.refs.copyImageButton = this.button('Copy', 'Copy to clipboard', true);
     this.refs.downloadButton = this.button('Download', 'Download image', true);
     this.refs.exportPresetSelect = el('select', {
@@ -173,9 +163,6 @@ export class CanvasArea {
           this.refs.checkRisButton,
           this.refs.roundTitle,
           this.refs.roundAnswer,
-          this.refs.postRedditButton,
-          this.refs.subredditInput,
-          this.refs.saveButton,
         ]),
       ]),
     ]);

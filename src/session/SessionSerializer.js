@@ -33,7 +33,6 @@ export class SessionSerializer {
         uploadedUrl: app.canvasArea.refs.uploadedUrl.value,
         roundTitle: app.canvasArea.refs.roundTitle.value,
         roundAnswer: app.canvasArea.refs.roundAnswer.value,
-        subreddit: app.canvasArea.refs.subredditInput.value,
         exportPreset: app.canvasArea.refs.exportPresetSelect.value,
         exportSize: app.canvasArea.refs.exportSizeSelect.value,
         exportFormat: app.canvasArea.refs.exportFormatSelect.value,
@@ -121,9 +120,10 @@ export class SessionSerializer {
         ...base,
         imageLayerData: {
           persistentUrl,
-          serviceId: object?.__imageLayerData?.serviceId ?? '',
-          modelId: object?.__imageLayerData?.modelId ?? '',
-          prompt: object?.__imageLayerData?.prompt ?? '',
+          sourceType: object?.__imageLayerData?.sourceType ?? '',
+          sourceKind: object?.__imageLayerData?.sourceKind ?? '',
+          sourceLayerId: object?.__imageLayerData?.sourceLayerId ?? '',
+          sourceLayerName: object?.__imageLayerData?.sourceLayerName ?? '',
         },
       };
     }
@@ -169,7 +169,6 @@ export class SessionSerializer {
     app.canvasArea.refs.uploadedUrl.value = ui.uploadedUrl ?? '';
     app.canvasArea.refs.roundTitle.value = ui.roundTitle ?? '';
     app.canvasArea.refs.roundAnswer.value = ui.roundAnswer ?? '';
-    app.canvasArea.refs.subredditInput.value = ui.subreddit ?? 'picturegame';
     app.canvasArea.refs.exportPresetSelect.value = ui.exportPreset ?? 'original_png';
     app.canvasArea.refs.exportSizeSelect.value = ui.exportSize ?? 'original';
     app.canvasArea.refs.exportFormatSelect.value = ui.exportFormat ?? 'png';
@@ -277,7 +276,7 @@ export class SessionSerializer {
     }
 
     if (layerState.type === 'image') {
-      const layer = await app.restoreGeneratedImageLayer(layerState);
+      const layer = await app.restorePersistedImageLayer(layerState);
 
       if (layer) {
         this.applyObjectState(layer.container, layerState.layerState);

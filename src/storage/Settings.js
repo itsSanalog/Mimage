@@ -1,6 +1,5 @@
 const ACTIVE_THEME_KEY = 'imagemasker.activeTheme';
 const CUSTOM_THEMES_KEY = 'imagemasker.customThemes';
-const AI_EDIT_SETTINGS_KEY = 'imagemasker.aiEditSettings';
 const PASTE_IMAGE_AS_LAYER_KEY = 'imagemasker.pasteImageAsLayer';
 const EDITOR_SHORTCUTS_KEY = 'imagemasker.editorShortcuts';
 const LEGACY_THEME_KEY = 'Night';
@@ -46,22 +45,6 @@ export class Settings {
 
   setCustomThemes(themes) {
     localStorage.setItem(CUSTOM_THEMES_KEY, JSON.stringify(Array.isArray(themes) ? themes : []));
-  }
-
-  getAiEditSettings() {
-    try {
-      const value = JSON.parse(localStorage.getItem(AI_EDIT_SETTINGS_KEY) || '{}');
-      return value && typeof value === 'object' ? value : {};
-    } catch {
-      return {};
-    }
-  }
-
-  setAiEditSettings(settings) {
-    localStorage.setItem(
-      AI_EDIT_SETTINGS_KEY,
-      JSON.stringify(settings && typeof settings === 'object' ? settings : {})
-    );
   }
 
   getPasteImageAsLayer() {

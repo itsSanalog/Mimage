@@ -57,7 +57,6 @@ function normalizeUi(ui) {
     uploadedUrl: typeof ui?.uploadedUrl === 'string' ? ui.uploadedUrl : '',
     roundTitle: typeof ui?.roundTitle === 'string' ? ui.roundTitle : '',
     roundAnswer: typeof ui?.roundAnswer === 'string' ? ui.roundAnswer : '',
-    subreddit: typeof ui?.subreddit === 'string' ? ui.subreddit : 'picturegame',
     exportPreset: typeof ui?.exportPreset === 'string' ? ui.exportPreset : 'original_png',
     exportSize: typeof ui?.exportSize === 'string' ? ui.exportSize : 'original',
     exportFormat: typeof ui?.exportFormat === 'string' ? ui.exportFormat : 'png',

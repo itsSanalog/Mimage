@@ -1,5 +1,4 @@
 import { CanvasEngine } from './core/CanvasEngine.js';
-import { SavedRoundsController } from './controllers/SavedRoundsController.js';
 import { SessionController } from './controllers/SessionController.js';
 import { UiStateController } from './controllers/UiStateController.js';
 import { EventBus } from './core/EventBus.js';
@@ -13,8 +12,6 @@ import { MaskEffects } from './masks/MaskEffects.js';
 import { MaskManager } from './masks/MaskManager.js';
 import { SessionSerializer } from './session/SessionSerializer.js';
 import { SessionStorage } from './session/SessionStorage.js';
-import { MaskStorage } from './storage/MaskStorage.js';
-import { RoundStorage } from './storage/RoundStorage.js';
 import { Settings } from './storage/Settings.js';
 import { BrushTool } from './tools/BrushTool.js';
 import { EraserTool } from './tools/EraserTool.js';
@@ -40,7 +37,6 @@ import { ThemeManager } from './ui/ThemeManager.js';
 import { ThemePanel } from './ui/ThemePanel.js';
 import { ToastManager } from './ui/ToastManager.js';
 import { Toolbar } from './ui/Toolbar.js';
-import { RedditPoster } from './integrations/RedditPoster.js';
 import { RISChecker } from './integrations/RISChecker.js';
 import { addProxyToUrl } from './integrations/CorsProxy.js';
 import { el } from './utils/dom.js';
@@ -59,8 +55,6 @@ export class App {
     this.eventBus = new EventBus();
     this.settings = new Settings();
     this.themeManager = new ThemeManager(this.settings);
-    this.maskStorage = new MaskStorage();
-    this.roundStorage = new RoundStorage();
     this.sessionStorage = new SessionStorage();
     this.canvasEngine = null;
     this.layerManager = null;
@@ -71,7 +65,6 @@ export class App {
     this.toolManager = null;
     this.keyboardShortcuts = null;
     this.imgurUploader = null;
-    this.redditPoster = new RedditPoster();
     this.risChecker = null;
     this.maskManager = null;
     this.maskEffects = null;
@@ -87,7 +80,6 @@ export class App {
     this.layerPanel = null;
     this.canvasArea = null;
     this.sessionPanel = null;
-    this.savedRoundsPanel = null;
     this.themePanel = null;
     this.shortcutsPanel = null;
     this.settingsModal = null;
@@ -102,7 +94,6 @@ export class App {
     this.menuShortcutsButton = null;
     this.topMenuPopovers = null;
     this.githubButton = null;
-    this.savedRoundIndex = 0;
     this.sessionSerializer = null;
     this.currentBackgroundSource = null;
     this.selectedSessionId = '';
@@ -113,7 +104,6 @@ export class App {
     this.expandedLayerSettings = new Set();
     this.selectedPanelLayerId = null;
     this.uiStateController = null;
-    this.savedRoundsController = null;
     this.sessionController = null;
   }
 
@@ -139,7 +129,6 @@ export class App {
     this.backgroundRemover = new BackgroundRemover();
     this.sessionSerializer = new SessionSerializer();
     this.uiStateController = new UiStateController(this);
-    this.savedRoundsController = new SavedRoundsController(this);
     this.sessionController = new SessionController(this);
     this.imgurUploader = new ImgurUploader(this.canvasEngine, this.settings);
     this.maskManager = new MaskManager(this.canvasEngine, this.layerManager, this.eventBus);
@@ -263,7 +252,6 @@ export class App {
       ]),
       this.topMenuPopovers,
     ]);
-    this.maskPanel = { element: rightPanel };
 
     rightPanel.appendChild(this.toolbar.element);
     rightPanel.appendChild(this.layerPanel.element);
@@ -331,7 +319,6 @@ export class App {
       settings: this.settings,
       historyManager: this.historyManager,
       selectTool: this.selectTool,
-      savedRoundsElement: null,
       shouldIgnoreShortcut: () => !this.settingsModal.refs.overlay.classList.contains('hidden'),
       handlers: {
         undo: () => this.historyManager.undo(),
@@ -358,7 +345,6 @@ export class App {
         nudgeRight: () => this.nudgeSelectedObject(10, 0),
         nudgeDown: () => this.nudgeSelectedObject(0, 10),
         nudgeUp: () => this.nudgeSelectedObject(0, -10),
-        customSubreddit: () => this.showCustomSubredditInput(),
       },
     });
     this.keyboardShortcuts.init();
@@ -1040,38 +1026,12 @@ export class App {
       this.risChecker.check(refs.uploadedUrl.value);
     });
 
-    refs.postRedditButton.addEventListener('click', async () => {
-      if (!refs.uploadedUrl.value.trim()) {
-        this.notify('Upload an image first before posting to Reddit.', 'warning');
-        return;
-      }
-
-      try {
-        await this.redditPoster.postToReddit(
-          refs.uploadedUrl.value,
-          refs.roundTitle.value,
-          refs.subredditInput.value || 'picturegame'
-        );
-        this.notify('Opened Reddit submission page.', 'success');
-      } catch (error) {
-        this.notify('Could not open Reddit submission flow.', 'error');
-      }
-    });
-
-    refs.subredditInput.addEventListener('input', () => {
-      this.updatePostRedditButtonLabel();
-    });
-
     refs.copyImageButton.addEventListener('click', async () => {
       await this.copyImage();
     });
 
     refs.downloadButton.addEventListener('click', async () => {
       await this.downloadImage();
-    });
-
-    refs.saveButton.addEventListener('click', () => {
-      this.saveRoundFromEditor();
     });
 
     refs.exportButton.addEventListener('click', async () => {
@@ -1113,10 +1073,6 @@ export class App {
     refs.actualSizeButton.addEventListener('click', () => {
       this.viewportController.setActualSize();
     });
-  }
-
-  bindSavedRoundEvents() {
-    this.savedRoundsController.bindEvents();
   }
 
   bindSessionEvents() {
@@ -1304,16 +1260,8 @@ export class App {
     this.uiStateController.applyImageLoadedUiState();
   }
 
-  updatePostRedditButtonLabel() {
-    this.uiStateController.updatePostRedditButtonLabel();
-  }
-
   applyRestoredSessionUiState() {
     this.uiStateController.applyRestoredSessionUiState();
-  }
-
-  showCustomSubredditInput() {
-    this.uiStateController.showCustomSubredditInput();
   }
 
   openSettings(tab = 'sessions') {
@@ -1619,7 +1567,6 @@ export class App {
     this.canvasArea.refs.uploadedUrl.value = '';
     this.canvasArea.refs.roundTitle.value = '';
     this.canvasArea.refs.roundAnswer.value = '';
-    this.canvasArea.refs.subredditInput.value = 'picturegame';
   }
 
   saveCurrentSession() {
@@ -2447,9 +2394,7 @@ export class App {
       const sourceType = object?.__imageLayerData?.sourceType ?? '';
       const badge = sourceType === 'background-removal'
         ? 'CUT'
-        : object?.__imageLayerData?.serviceId
-          ? 'AI'
-          : 'IMG';
+        : 'IMG';
 
       return {
         kind: 'image',
@@ -2576,7 +2521,7 @@ export class App {
         },
       });
       const persistentUrl = await this.blobToDataUrl(removedBlob);
-      const inserted = await this.createGeneratedImageLayer({
+      const inserted = await this.createImageLayerFromResult({
         result: {
           imageBlob: removedBlob,
           persistentUrl,
@@ -2810,7 +2755,7 @@ export class App {
     const context = canvas.getContext('2d');
 
     if (!context) {
-      throw new Error('Could not crop the AI source image.');
+      throw new Error('Could not crop the selected image region.');
     }
 
     context.drawImage(
@@ -2845,8 +2790,8 @@ export class App {
     });
   }
 
-  async createGeneratedImageLayer({ result, documentRect, name, metadata = {}, objectState = null }) {
-    const blob = await this.resolveAiResultBlob(result);
+  async createImageLayerFromResult({ result, documentRect, name, metadata = {}, objectState = null }) {
+    const blob = await this.resolveImageResultBlob(result);
     const objectUrl = URL.createObjectURL(blob);
     const image = await loadImageElement(objectUrl);
     const texture = PIXI.Texture.from(image);
@@ -2884,7 +2829,7 @@ export class App {
     };
   }
 
-  async resolveAiResultBlob(result) {
+  async resolveImageResultBlob(result) {
     if (result?.imageBlob instanceof Blob) {
       return result.imageBlob;
     }
@@ -2904,10 +2849,10 @@ export class App {
       return response.blob();
     }
 
-    throw new Error('The AI service returned no usable image.');
+    throw new Error('The service returned no usable image.');
   }
 
-  async restoreGeneratedImageLayer(layerState) {
+  async restorePersistedImageLayer(layerState) {
     const imageLayerData = layerState?.object?.imageLayerData ?? {};
     const persistentUrl = imageLayerData.persistentUrl;
 
@@ -2922,7 +2867,7 @@ export class App {
     }
 
     const blob = await response.blob();
-    const inserted = await this.createGeneratedImageLayer({
+    const inserted = await this.createImageLayerFromResult({
       result: {
         imageBlob: blob,
         persistentUrl,
@@ -3534,10 +3479,8 @@ export class App {
       refs.uploadedUrl.classList.remove('hidden');
       refs.copyUrlButton.classList.remove('hidden');
       refs.checkRisButton.classList.remove('hidden');
-      refs.postRedditButton.classList.remove('hidden');
       refs.roundTitle.classList.remove('hidden');
       refs.roundAnswer.classList.remove('hidden');
-      refs.saveButton.classList.remove('hidden');
       refs.exportButton.classList.remove('hidden');
       this.notify('Upload completed.', 'success');
     } catch (error) {
@@ -3550,39 +3493,6 @@ export class App {
     }
   }
 
-    async uploadToImgur() {
-    const refs = this.canvasArea.refs;
-    const exportOptions = this.getCurrentExportOptions();
-
-    refs.uploadButton.textContent = 'Uploading...';
-    refs.uploadButton.disabled = true;
-    refs.canvasHost.classList.add('hidden');
-    refs.previewImage.style.display = 'block';
-
-    try {
-      const dataUrl = await this.exportManager.exportDataUrl(exportOptions);
-      refs.previewImage.querySelector('#imagePreview').src = dataUrl;
-      const result = await this.imgurUploader.upload(dataUrl);
-      refs.uploadedUrl.value = result.url;
-      refs.uploadButton.textContent = 'Reupload';
-      refs.uploadedUrl.classList.remove('hidden');
-      refs.copyUrlButton.classList.remove('hidden');
-      refs.checkRisButton.classList.remove('hidden');
-      refs.postRedditButton.classList.remove('hidden');
-      refs.roundTitle.classList.remove('hidden');
-      refs.roundAnswer.classList.remove('hidden');
-      refs.saveButton.classList.remove('hidden');
-      refs.exportButton.classList.remove('hidden');
-      this.notify('Upload completed.', 'success');
-    } catch (error) {
-      this.notify(`Error uploading to Imgur. Reason: ${error.message}`, 'error', 3600);
-      refs.uploadButton.textContent = 'Upload to Imgur';
-    } finally {
-      refs.uploadButton.disabled = false;
-      refs.canvasHost.classList.remove('hidden');
-      refs.previewImage.style.display = 'none';
-    }
-  }
   async copyImage() {
     const clipboardSupportIssues = [];
 
@@ -3646,34 +3556,6 @@ export class App {
     } catch (error) {
       this.notify('Download failed.', 'error');
     }
-  }
-
-  saveRoundFromEditor() {
-    this.savedRoundsController.saveRoundFromEditor();
-  }
-
-  saveRoundFromUrl() {
-    this.savedRoundsController.saveRoundFromUrl();
-  }
-
-  toggleSavedRounds() {
-    this.savedRoundsController.toggleSavedRounds();
-  }
-
-  toggleSaveFromUrl() {
-    this.savedRoundsController.toggleSaveFromUrl();
-  }
-
-  displaySavedRounds(direction) {
-    this.savedRoundsController.displaySavedRounds(direction);
-  }
-
-  renderSavedRound() {
-    this.savedRoundsController.renderSavedRound();
-  }
-
-  deleteSavedRound() {
-    this.savedRoundsController.deleteSavedRound();
   }
 
   async copyYml({ roundTitle, roundAnswer, imageUrl }) {
