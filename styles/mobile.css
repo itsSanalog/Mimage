@@ -9,6 +9,32 @@
     min-height: 100vh;
   }
 
+  #topMenuBar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .top-menu-buttons {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .top-menu-popovers {
+    width: 100%;
+  }
+
+  .top-menu-popover-panel {
+    width: min(420px, calc(100vw - 24px));
+  }
+
+  .top-menu-popover-panel[data-menu='export'] {
+    left: 0;
+  }
+
+  .top-menu-popover-panel[data-menu='view'] {
+    left: 0;
+  }
+
   #container.app-grid {
     grid-template-columns: 1fr;
     grid-template-areas:
@@ -76,7 +102,7 @@
   #layerPanel button,
   #displayRounds,
   #saveFromURL,
-  #settingsButton {
+  .top-menu-button {
     font-size: 16px;
   }
 

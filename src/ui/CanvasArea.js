@@ -160,7 +160,6 @@ export class CanvasArea {
     ]);
     this.refs.canvasHost = el('div', { id: 'canvasDiv' });
     this.refs.shareGroup = el('div', { className: 'action-group action-group--share' }, [
-      el('div', { className: 'action-group-label', textContent: 'Share' }),
       el('div', { className: 'action-group-controls action-group-controls--stack' }, [
         el('div', { className: 'share-token-controls' }, [
           this.refs.accessTokenInput,
@@ -188,7 +187,6 @@ export class CanvasArea {
       ]),
     ]);
     this.refs.exportGroup = el('div', { className: 'action-group action-group--export' }, [
-      el('div', { className: 'action-group-label', textContent: 'Export' }),
       el('div', { className: 'action-group-controls' }, [
         this.refs.copyImageButton,
         this.refs.downloadButton,
@@ -201,7 +199,6 @@ export class CanvasArea {
       ]),
     ]);
     this.refs.viewGroup = el('div', { className: 'action-group action-group--view' }, [
-      el('div', { className: 'action-group-label', textContent: 'View' }),
       el('div', { className: 'action-group-controls action-group-controls--view' }, [
         this.refs.zoomOutButton,
         this.refs.zoomLabel,

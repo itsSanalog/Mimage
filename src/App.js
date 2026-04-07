@@ -94,7 +94,13 @@ export class App {
     this.toastManager = null;
     this.appShell = null;
     this.chromeControls = null;
-    this.settingsButton = null;
+    this.menuShareButton = null;
+    this.menuExportButton = null;
+    this.menuViewButton = null;
+    this.menuSessionsButton = null;
+    this.menuThemesButton = null;
+    this.menuShortcutsButton = null;
+    this.topMenuPopovers = null;
     this.githubButton = null;
     this.savedRoundIndex = 0;
     this.sessionSerializer = null;
@@ -166,16 +172,61 @@ export class App {
     this.settingsModal = new SettingsModal();
     this.toastManager = new ToastManager();
 
-    this.settingsButton = el('button', {
-      id: 'settingsButton',
+    this.menuShareButton = el('button', {
+      id: 'menuShareButton',
       type: 'button',
-      textContent: 'Settings',
-      'aria-label': 'Open settings',
+      className: 'top-menu-button',
+      textContent: 'Share',
+      'aria-label': 'Open Share menu',
+      'aria-expanded': 'false',
+    });
+
+    this.menuExportButton = el('button', {
+      id: 'menuExportButton',
+      type: 'button',
+      className: 'top-menu-button',
+      textContent: 'Export',
+      'aria-label': 'Open Export menu',
+      'aria-expanded': 'false',
+    });
+
+    this.menuViewButton = el('button', {
+      id: 'menuViewButton',
+      type: 'button',
+      className: 'top-menu-button',
+      textContent: 'View',
+      'aria-label': 'Open View menu',
+      'aria-expanded': 'false',
+    });
+
+    this.menuSessionsButton = el('button', {
+      id: 'menuSessionsButton',
+      type: 'button',
+      className: 'top-menu-button',
+      textContent: 'Sessions',
+      'aria-label': 'Open sessions',
+    });
+
+    this.menuThemesButton = el('button', {
+      id: 'menuThemesButton',
+      type: 'button',
+      className: 'top-menu-button',
+      textContent: 'Themes',
+      'aria-label': 'Open themes',
+    });
+
+    this.menuShortcutsButton = el('button', {
+      id: 'menuShortcutsButton',
+      type: 'button',
+      className: 'top-menu-button',
+      textContent: 'Shortcuts',
+      'aria-label': 'Open shortcuts',
     });
 
     this.githubButton = el('button', {
       id: 'github',
       type: 'button',
+      className: 'top-menu-button top-menu-button--icon',
       'aria-label': 'GitHub',
       innerHTML: `
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -183,23 +234,41 @@ export class App {
         </svg>`,
     });
 
-    this.chromeControls = el('div', { className: 'chrome-controls' }, [
-      this.settingsButton,
-      this.githubButton,
-    ]);
-
     this.settingsModal.refs.sessionsContent.appendChild(this.sessionPanel.element);
     this.settingsModal.refs.themesContent.appendChild(this.themePanel.element);
     this.settingsModal.refs.shortcutsContent.appendChild(this.shortcutsPanel.element);
 
     const rightPanel = el('div', { id: 'masksDiv' }, []);
+    this.canvasArea.refs.actionBar.replaceChildren(this.canvasArea.refs.importGroup);
+    this.canvasArea.refs.shareGroup.classList.add('top-menu-popover-panel', 'hidden');
+    this.canvasArea.refs.shareGroup.dataset.menu = 'share';
+    this.canvasArea.refs.exportGroup.classList.add('top-menu-popover-panel', 'hidden');
+    this.canvasArea.refs.exportGroup.dataset.menu = 'export';
+    this.canvasArea.refs.viewGroup.classList.add('top-menu-popover-panel', 'hidden');
+    this.canvasArea.refs.viewGroup.dataset.menu = 'view';
+    this.topMenuPopovers = el('div', { className: 'top-menu-popovers' }, [
+      this.canvasArea.refs.shareGroup,
+      this.canvasArea.refs.exportGroup,
+      this.canvasArea.refs.viewGroup,
+    ]);
+    const topMenuBar = el('div', { id: 'topMenuBar' }, [
+      el('div', { className: 'top-menu-buttons' }, [
+        this.menuShareButton,
+        this.menuExportButton,
+        this.menuViewButton,
+        this.menuSessionsButton,
+        this.menuThemesButton,
+        this.menuShortcutsButton,
+        this.githubButton,
+      ]),
+      this.topMenuPopovers,
+    ]);
     this.maskPanel = { element: rightPanel };
 
-    rightPanel.appendChild(this.chromeControls);
     rightPanel.appendChild(this.toolbar.element);
     rightPanel.appendChild(this.layerPanel.element);
     rightPanel.appendChild(this.canvasArea.refs.actionBar);
-    rightPanel.appendChild(this.backgroundRemovalPanel.element);
+    this.toolbar.toolSelectorElement.appendChild(this.backgroundRemovalPanel.element);
 
     const grid = el('div', { id: 'container', className: 'app-grid' }, [
       this.toolbar.toolSelectorElement,
@@ -211,6 +280,7 @@ export class App {
       className: 'app-root',
       'data-layout-columns': 'default',
     }, [
+      topMenuBar,
       grid,
       this.settingsModal.element,
       this.toastManager.element,
@@ -324,8 +394,76 @@ export class App {
   }
 
   bindThemeEvents() {
-    this.settingsButton.addEventListener('click', () => {
+    this.menuSessionsButton.addEventListener('click', () => {
       this.openSettings('sessions');
+    });
+
+    this.menuThemesButton.addEventListener('click', () => {
+      this.openSettings('themes');
+    });
+
+    this.menuShortcutsButton.addEventListener('click', () => {
+      this.openSettings('shortcuts');
+    });
+
+    const topMenuGroups = {
+      share: {
+        button: this.menuShareButton,
+        group: this.canvasArea.refs.shareGroup,
+      },
+      export: {
+        button: this.menuExportButton,
+        group: this.canvasArea.refs.exportGroup,
+      },
+      view: {
+        button: this.menuViewButton,
+        group: this.canvasArea.refs.viewGroup,
+      },
+    };
+
+    const closeTopMenus = () => {
+      Object.values(topMenuGroups).forEach(({ button, group }) => {
+        group.classList.add('hidden');
+        button.setAttribute('aria-expanded', 'false');
+      });
+    };
+
+    const toggleTopMenu = (menuId) => {
+      const targetMenu = topMenuGroups[menuId];
+
+      if (!targetMenu) {
+        return;
+      }
+
+      const { button: targetButton, group: targetGroup } = targetMenu;
+      const shouldOpen = targetGroup.classList.contains('hidden');
+
+      closeTopMenus();
+      targetGroup.classList.toggle('hidden', !shouldOpen);
+      targetButton.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+    };
+
+    this.menuShareButton.addEventListener('click', (event) => {
+      event.stopPropagation();
+      toggleTopMenu('share');
+    });
+
+    this.menuExportButton.addEventListener('click', (event) => {
+      event.stopPropagation();
+      toggleTopMenu('export');
+    });
+
+    this.menuViewButton.addEventListener('click', (event) => {
+      event.stopPropagation();
+      toggleTopMenu('view');
+    });
+
+    this.topMenuPopovers.addEventListener('click', (event) => {
+      event.stopPropagation();
+    });
+
+    document.addEventListener('click', () => {
+      closeTopMenus();
     });
 
     this.settingsModal.refs.closeButton.addEventListener('click', () => {
@@ -353,6 +491,10 @@ export class App {
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape' && !this.settingsModal.refs.overlay.classList.contains('hidden')) {
         this.closeSettings();
+      }
+
+      if (event.key === 'Escape') {
+        closeTopMenus();
       }
     });
 
@@ -3408,6 +3550,39 @@ export class App {
     }
   }
 
+    async uploadToImgur() {
+    const refs = this.canvasArea.refs;
+    const exportOptions = this.getCurrentExportOptions();
+
+    refs.uploadButton.textContent = 'Uploading...';
+    refs.uploadButton.disabled = true;
+    refs.canvasHost.classList.add('hidden');
+    refs.previewImage.style.display = 'block';
+
+    try {
+      const dataUrl = await this.exportManager.exportDataUrl(exportOptions);
+      refs.previewImage.querySelector('#imagePreview').src = dataUrl;
+      const result = await this.imgurUploader.upload(dataUrl);
+      refs.uploadedUrl.value = result.url;
+      refs.uploadButton.textContent = 'Reupload';
+      refs.uploadedUrl.classList.remove('hidden');
+      refs.copyUrlButton.classList.remove('hidden');
+      refs.checkRisButton.classList.remove('hidden');
+      refs.postRedditButton.classList.remove('hidden');
+      refs.roundTitle.classList.remove('hidden');
+      refs.roundAnswer.classList.remove('hidden');
+      refs.saveButton.classList.remove('hidden');
+      refs.exportButton.classList.remove('hidden');
+      this.notify('Upload completed.', 'success');
+    } catch (error) {
+      this.notify(`Error uploading to Imgur. Reason: ${error.message}`, 'error', 3600);
+      refs.uploadButton.textContent = 'Upload to Imgur';
+    } finally {
+      refs.uploadButton.disabled = false;
+      refs.canvasHost.classList.remove('hidden');
+      refs.previewImage.style.display = 'none';
+    }
+  }
   async copyImage() {
     const clipboardSupportIssues = [];
 
