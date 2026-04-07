@@ -1,4 +1,4 @@
-# ImageMasker with no masking
+# Mimage - ImageMasker with no masking
 
 Forked from [ImageMasker (with masking)](https://github.com/ImageMasker/ImageMasker.github.io)
 
