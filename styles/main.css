@@ -8,69 +8,108 @@
 :root {
   --tools-column-width: 110px;
   --masks-column-width: 290px;
-  --bg-primary: rgb(240, 236, 228);
-  --bg-panel: rgb(247, 229, 205);
-  --bg-button: rgb(236, 140, 116);
-  --bg-button-hover: rgb(240, 161, 142);
-  --bg-input: rgb(238, 168, 150);
-  --bg-slider: rgb(231, 199, 173);
-  --bg-slider-thumb: rgb(224, 146, 82);
-  --bg-upload-label: rgb(240, 214, 181);
-  --bg-upload-label-hover: rgb(233, 187, 144);
-  --bg-nav-button: rgb(255, 197, 88);
-  --bg-saved-rounds-button: rgb(240, 214, 181);
-  --bg-saved-rounds-button-hover: rgb(233, 187, 144);
-  --bg-country-select: rgb(236, 212, 192);
-  --bg-night-button: rgb(240, 214, 181);
-  --bg-night-button-hover: rgb(240, 216, 173);
-  --bg-github-button: grey;
-  --bg-github-button-hover: rgb(255, 255, 255);
-  --bg-overlay: rgba(36, 26, 16, 0.34);
-  --bg-success: rgb(125, 179, 120);
-  --bg-warning: rgb(214, 151, 73);
-  --bg-error: rgb(191, 92, 92);
-  --text-primary: rgb(63, 63, 63);
-  --text-muted: rgba(63, 63, 63, 0.75);
-  --text-button: white;
-  --text-placeholder: rgb(230, 230, 230);
-  --border-fieldset: #555;
-  --border-strong: rgba(63, 63, 63, 0.18);
-  --slider-hover: rgb(236, 212, 192);
-  --shadow-soft: 0 12px 32px rgba(0, 0, 0, 0.08);
-  --focus-ring: rgba(224, 146, 82, 0.85);
+  --flexoki-black: #100f0f;
+  --flexoki-paper: #fffcf0;
+  --flexoki-950: #1c1b1a;
+  --flexoki-900: #282726;
+  --flexoki-850: #343331;
+  --flexoki-800: #403e3c;
+  --flexoki-700: #575653;
+  --flexoki-600: #6f6e69;
+  --flexoki-500: #878580;
+  --flexoki-300: #b7b5ac;
+  --flexoki-200: #cecdc3;
+  --flexoki-150: #dad8ce;
+  --flexoki-100: #e6e4d9;
+  --flexoki-50: #f2f0e5;
+  --flexoki-red-600: #af3029;
+  --flexoki-red-400: #d14d41;
+  --flexoki-orange-600: #bc5215;
+  --flexoki-orange-400: #da702c;
+  --flexoki-yellow-600: #ad8301;
+  --flexoki-yellow-400: #d0a215;
+  --flexoki-green-600: #66800b;
+  --flexoki-green-400: #879a39;
+  --flexoki-cyan-600: #24837b;
+  --flexoki-cyan-400: #3aa99f;
+  --flexoki-blue-600: #205ea6;
+  --flexoki-blue-400: #4385be;
+  --flexoki-purple-600: #5e409d;
+  --flexoki-purple-400: #8b7ec8;
+  --flexoki-magenta-600: #a02f6f;
+  --flexoki-magenta-400: #ce5d97;
+
+  --color-bg-primary: var(--flexoki-paper);
+  --color-bg-secondary: var(--flexoki-50);
+  --color-ui-normal: var(--flexoki-100);
+  --color-ui-hover: var(--flexoki-150);
+  --color-ui-active: var(--flexoki-200);
+  --color-tx-normal: var(--flexoki-black);
+  --color-tx-muted: var(--flexoki-600);
+  --color-tx-faint: var(--flexoki-300);
+  --color-action: var(--flexoki-orange-600);
+  --color-action-hover: var(--flexoki-orange-400);
+  --color-re: var(--flexoki-red-600);
+  --color-re-hover: var(--flexoki-red-400);
+  --color-or: var(--flexoki-orange-600);
+  --color-or-hover: var(--flexoki-orange-400);
+  --color-ye: var(--flexoki-yellow-600);
+  --color-ye-hover: var(--flexoki-yellow-400);
+  --color-gr: var(--flexoki-green-600);
+  --color-gr-hover: var(--flexoki-green-400);
+  --color-cy: var(--flexoki-cyan-600);
+  --color-cy-hover: var(--flexoki-cyan-400);
+  --color-bl: var(--flexoki-blue-600);
+  --color-bl-hover: var(--flexoki-blue-400);
+  --color-pu: var(--flexoki-purple-600);
+  --color-pu-hover: var(--flexoki-purple-400);
+  --color-ma: var(--flexoki-magenta-600);
+  --color-ma-hover: var(--flexoki-magenta-400);
+  --color-overlay: rgba(36, 26, 16, 0.34);
+  --color-success: var(--color-gr);
+  --color-warning: var(--color-ye);
+  --color-danger: var(--color-re);
+  --color-border: rgba(16, 15, 15, 0.14);
+  --color-tx-on-accent: var(--flexoki-paper);
+  --color-focus: rgba(188, 82, 21, 0.7);
+  --shadow-soft: 0 12px 32px rgba(45, 35, 24, 0.14);
 }
 
 :root.dark {
-  --bg-primary: rgb(24, 24, 34);
-  --bg-panel: rgb(52, 57, 107);
-  --bg-button: rgb(53, 44, 95);
-  --bg-button-hover: rgb(71, 77, 146);
-  --bg-input: rgb(74, 59, 136);
-  --bg-slider: rgb(52, 57, 107);
-  --bg-slider-thumb: rgb(71, 77, 146);
-  --bg-upload-label: rgb(52, 57, 107);
-  --bg-upload-label-hover: rgb(71, 77, 146);
-  --bg-nav-button: rgb(37, 30, 70);
-  --bg-saved-rounds-button: rgb(52, 57, 107);
-  --bg-saved-rounds-button-hover: rgb(71, 77, 146);
-  --bg-country-select: rgb(52, 57, 107);
-  --bg-night-button: rgb(55, 48, 77);
-  --bg-night-button-hover: rgb(71, 77, 146);
-  --bg-github-button: grey;
-  --bg-github-button-hover: rgb(255, 255, 255);
-  --bg-overlay: rgba(8, 10, 24, 0.52);
-  --bg-success: rgb(74, 138, 102);
-  --bg-warning: rgb(191, 132, 61);
-  --bg-error: rgb(170, 82, 92);
-  --text-primary: rgb(228, 226, 226);
-  --text-muted: rgba(228, 226, 226, 0.78);
-  --text-button: white;
-  --text-placeholder: rgb(180, 180, 180);
-  --border-fieldset: #888;
-  --border-strong: rgba(255, 255, 255, 0.14);
-  --slider-hover: rgb(71, 77, 146);
+  --color-bg-primary: var(--flexoki-black);
+  --color-bg-secondary: var(--flexoki-950);
+  --color-ui-normal: var(--flexoki-900);
+  --color-ui-hover: var(--flexoki-850);
+  --color-ui-active: var(--flexoki-800);
+  --color-tx-normal: var(--flexoki-200);
+  --color-tx-muted: var(--flexoki-500);
+  --color-tx-faint: var(--flexoki-700);
+  --color-action: var(--flexoki-orange-400);
+  --color-action-hover: var(--flexoki-orange-600);
+  --color-re: var(--flexoki-red-400);
+  --color-re-hover: var(--flexoki-red-600);
+  --color-or: var(--flexoki-orange-400);
+  --color-or-hover: var(--flexoki-orange-600);
+  --color-ye: var(--flexoki-yellow-400);
+  --color-ye-hover: var(--flexoki-yellow-600);
+  --color-gr: var(--flexoki-green-400);
+  --color-gr-hover: var(--flexoki-green-600);
+  --color-cy: var(--flexoki-cyan-400);
+  --color-cy-hover: var(--flexoki-cyan-600);
+  --color-bl: var(--flexoki-blue-400);
+  --color-bl-hover: var(--flexoki-blue-600);
+  --color-pu: var(--flexoki-purple-400);
+  --color-pu-hover: var(--flexoki-purple-600);
+  --color-ma: var(--flexoki-magenta-400);
+  --color-ma-hover: var(--flexoki-magenta-600);
+  --color-overlay: rgba(8, 10, 24, 0.52);
+  --color-success: var(--color-gr);
+  --color-warning: var(--color-ye);
+  --color-danger: var(--color-re);
+  --color-border: rgba(255, 255, 255, 0.14);
+  --color-tx-on-accent: var(--flexoki-black);
+  --color-focus: rgba(255, 214, 168, 0.92);
   --shadow-soft: 0 12px 32px rgba(0, 0, 0, 0.22);
-  --focus-ring: rgba(255, 214, 168, 0.92);
 }
 
 * {
@@ -86,8 +125,8 @@ body {
 
 body {
   font-family: Arial, sans-serif;
-  background: var(--bg-primary);
-  color: var(--text-primary);
+  background: var(--color-bg-primary);
+  color: var(--color-tx-normal);
   transition: background-color 0.5s ease, color 0.5s ease;
 }
 
@@ -102,17 +141,17 @@ input,
 select,
 textarea {
   border: 1px solid transparent;
-  background: var(--bg-input);
-  color: var(--text-button);
+  background: var(--color-ui-normal);
+  color: var(--color-tx-normal);
   padding: 8px;
 }
 
 input::placeholder {
-  color: var(--text-placeholder);
+  color: var(--color-tx-faint);
 }
 
 textarea::placeholder {
-  color: var(--text-placeholder);
+  color: var(--color-tx-faint);
 }
 
 legend {
@@ -149,7 +188,7 @@ legend {
 .top-menu-button {
   border: none;
   background: transparent;
-  color: var(--text-primary);
+  color: var(--color-tx-normal);
   font-size: 0.78rem;
   font-weight: 700;
   line-height: 1;
@@ -161,7 +200,7 @@ legend {
 
 .top-menu-button:hover,
 .top-menu-button[aria-expanded='true'] {
-  background: color-mix(in srgb, var(--bg-button) 20%, transparent);
+  background: color-mix(in srgb, var(--color-ui-hover) 72%, transparent);
 }
 
 .top-menu-button--icon {
@@ -187,9 +226,9 @@ legend {
   width: min(420px, calc(100vw - 24px));
   margin: 0;
   padding: 8px 10px;
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--color-border);
   border-radius: 12px;
-  background: var(--bg-panel);
+  background: var(--color-bg-secondary);
   box-shadow: var(--shadow-soft);
 }
 
@@ -218,11 +257,11 @@ legend {
 }
 
 .top-menu-popover-panel.action-group {
-  background: var(--bg-panel);
+  background: var(--color-bg-secondary);
 }
 
 :root.dark .top-menu-popover-panel.action-group {
-  background: var(--bg-panel);
+  background: var(--color-bg-secondary);
 }
 
 #app {
@@ -278,8 +317,8 @@ legend {
   margin: 0;
   border: none;
   border-radius: 8px;
-  background: var(--bg-panel);
-  color: var(--text-primary);
+  background: var(--color-bg-secondary);
+  color: var(--color-tx-normal);
   box-shadow: none;
 }
 
@@ -303,22 +342,23 @@ legend {
   min-height: 30px;
   border-radius: 999px;
   padding: 4px 8px;
-  background: var(--bg-button);
-  color: var(--text-button);
+  background: var(--color-ui-normal);
+  color: var(--color-tx-normal);
   cursor: pointer;
   font-size: 0.8rem;
 }
 
 .app-button:hover {
-  background: var(--bg-button-hover);
+  background: var(--color-ui-hover);
+  color: var(--color-action);
 }
 
 .app-button.is-active {
-  background: var(--bg-slider-thumb);
+  background: var(--color-ui-active);;
 }
 
 .app-button.is-success {
-  background: var(--bg-success);
+  background: var(--color-success);
 }
 
 .chrome-controls {
@@ -339,7 +379,7 @@ legend {
   cursor: pointer;
 }
 #github:hover {
-  background-color: color-mix(in srgb, var(--bg-button) 20%, transparent);
+  background-color: color-mix(in srgb, var(--color-ui-hover) 72%, transparent);
 }
 
 #github {
@@ -347,7 +387,7 @@ legend {
   align-items: center;
   justify-content: center;
   padding: 0;
-  color: var(--text-primary);
+  color: var(--color-tx-normal);
 }
 
 #github svg {
@@ -374,12 +414,12 @@ legend {
   height: 8px;
   border: none;
   padding: 8px;
-  background: var(--bg-slider);
+  background: var(--color-ui-normal);
   opacity: 0.8;
 }
 
 .sliders:hover {
-  background: var(--slider-hover);
+  background: var(--color-ui-hover);
 }
 
 .sliders::-webkit-slider-thumb {
@@ -387,12 +427,12 @@ legend {
   appearance: none;
   width: 6px;
   height: 18px;
-  background: var(--bg-slider-thumb);
+  background: var(--color-action);
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--text-primary) 28%, transparent) transparent;
+  scrollbar-color: color-mix(in srgb, var(--color-tx-normal) 28%, transparent) transparent;
 }
 
 *::-webkit-scrollbar {
@@ -405,11 +445,11 @@ legend {
 }
 
 *::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--text-primary) 24%, transparent);
+  background: color-mix(in srgb, var(--color-tx-normal) 24%, transparent);
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, var(--text-primary) 36%, transparent);
+  background: color-mix(in srgb, var(--color-tx-normal) 36%, transparent);
 }
 
 button:focus-visible,
@@ -418,7 +458,7 @@ select:focus-visible,
 textarea:focus-visible,
 summary:focus-visible,
 a:focus-visible {
-  outline: 3px solid var(--focus-ring);
+  outline: 3px solid var(--color-focus);
   outline-offset: 2px;
 }
 
@@ -442,9 +482,9 @@ a:focus-visible {
   position: fixed;
   z-index: 20;
   padding: 4px 8px;
-  border: 1px solid var(--bg-slider-thumb);
+  border: 1px solid var(--color-action);
   border-radius: 8px;
-  background: white;
+  background: var(--color-bg-secondary);
 }
 
 .panel-intro-copy,
@@ -452,7 +492,7 @@ a:focus-visible {
 .workflow-intro-copy,
 .workflow-status,
 .panel-empty-state {
-  color: var(--text-muted);
+  color: var(--color-tx-muted);
 }
 
 .panel-intro-copy,
@@ -464,14 +504,14 @@ a:focus-visible {
 
 .panel-empty-state {
   padding: 8px 10px;
-  border: 1px dashed var(--border-strong);
+  border: 1px dashed var(--color-border);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.18);
   line-height: 1.4;
 }
 
 :root.dark .panel-empty-state {
-  background: rgba(0, 0, 0, 0.14);
+  background: color-mix(in srgb, var(--color-ui-active) 38%, transparent);
 }
 
 .panel-inline-message {
@@ -482,22 +522,22 @@ a:focus-visible {
 }
 
 .panel-inline-message--info {
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--color-border);
 }
 
 .panel-inline-message--warning {
-  border: 1px solid rgba(214, 151, 73, 0.35);
-  background: rgba(214, 151, 73, 0.12);
+  border: 1px solid color-mix(in srgb, var(--color-warning) 40%, transparent);
+  background: color-mix(in srgb, var(--color-warning) 16%, transparent);
 }
 
 .panel-inline-message--error {
-  border: 1px solid rgba(191, 92, 92, 0.38);
-  background: rgba(191, 92, 92, 0.14);
+  border: 1px solid color-mix(in srgb, var(--color-danger) 42%, transparent);
+  background: color-mix(in srgb, var(--color-danger) 16%, transparent);
 }
 
 .panel-inline-message--success {
-  border: 1px solid rgba(125, 179, 120, 0.38);
-  background: rgba(125, 179, 120, 0.14);
+  border: 1px solid color-mix(in srgb, var(--color-success) 42%, transparent);
+  background: color-mix(in srgb, var(--color-success) 16%, transparent);
 }
 
 .toast-stack {
@@ -525,15 +565,15 @@ a:focus-visible {
 }
 
 .toast--success {
-  background: var(--bg-success);
+  background: var(--color-success);
 }
 
 .toast--warning {
-  background: var(--bg-warning);
+  background: var(--color-warning);
 }
 
 .toast--error {
-  background: var(--bg-error);
+  background: var(--color-danger);
 }
 
 .toast--leaving {

@@ -25,18 +25,18 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-  border: 2px dashed var(--bg-slider-thumb);
+  border: 2px dashed var(--color-action);
   border-radius: 8px;
-  background: var(--bg-upload-label);
-  color: var(--text-primary);
+  background: var(--color-ui-normal);
+  color: var(--color-tx-normal);
   cursor: pointer;
   transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .drop-overlay:hover,
 .drop-overlay.is-drag-over {
-  background: var(--bg-upload-label-hover);
-  border-color: var(--bg-button);
+  background: var(--color-ui-hover);
+  border-color: var(--color-action-hover);
 }
 
 .drop-overlay-icon {
@@ -83,7 +83,7 @@
   display: grid;
   gap: 4px;
   padding: 6px 8px;
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--color-border);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.18);
 }
@@ -170,13 +170,13 @@
   height: 16px;
   margin: 0;
   padding: 0;
-  accent-color: var(--bg-slider-thumb);
+  accent-color: var(--color-action);
 }
 
 .paste-mode-toggle-hint {
   font-size: 0.74rem;
   line-height: 1.35;
-  color: var(--text-muted);
+  color: var(--color-tx-muted);
 }
 
 #mobilePaste,

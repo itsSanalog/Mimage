@@ -6,7 +6,7 @@
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: var(--bg-overlay);
+  background: var(--color-overlay);
   backdrop-filter: blur(10px);
 }
 
@@ -18,10 +18,10 @@
   gap: 16px;
   overflow: hidden;
   padding: 22px;
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--color-border);
   border-radius: 22px;
-  background: var(--bg-panel);
-  color: var(--text-primary);
+  background: var(--color-bg-secondary);
+  color: var(--color-tx-normal);
   box-shadow: 0 28px 80px rgba(0, 0, 0, 0.28);
 }
 
@@ -46,13 +46,13 @@
   border: none;
   border-radius: 999px;
   padding: 8px 14px;
-  background: var(--bg-button);
-  color: var(--text-button);
+  background: var(--color-action);
+  color: var(--color-tx-on-accent);
   cursor: pointer;
 }
 
 .settings-modal-close:hover {
-  background: var(--bg-button-hover);
+  background: var(--color-action-hover);
 }
 
 .settings-tab-list {
@@ -73,14 +73,14 @@
   border-radius: 999px;
   padding: 10px 16px;
   background: transparent;
-  color: var(--text-primary);
+  color: var(--color-tx-normal);
   cursor: pointer;
   font-weight: 700;
 }
 
 .settings-tab-button.is-active {
-  background: var(--bg-button);
-  color: var(--text-button);
+  background: var(--color-action);
+  color: var(--color-tx-on-accent);
 }
 
 .settings-modal-body {

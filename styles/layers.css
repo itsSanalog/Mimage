@@ -32,17 +32,17 @@
 }
 
 .layer-row.is-selected {
-  border-color: color-mix(in srgb, var(--bg-slider-thumb) 55%, transparent);
-  background: color-mix(in srgb, var(--bg-slider-thumb) 10%, rgba(0, 0, 0, 0.04));
+  border-color: color-mix(in srgb, var(--color-action) 55%, transparent);
+  background: color-mix(in srgb, var(--color-action) 10%, rgba(0, 0, 0, 0.04));
 }
 
 .layer-row.is-active {
-  border-color: var(--bg-slider-thumb);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--bg-slider-thumb) 32%, transparent);
+  border-color: var(--color-action);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-action) 32%, transparent);
 }
 
 .layer-row:focus-visible {
-  outline: 2px solid var(--bg-slider-thumb);
+  outline: 2px solid var(--color-action);
   outline-offset: 2px;
 }
 
@@ -157,7 +157,7 @@
 .layer-opacity-label,
 .layer-opacity-value {
   font-size: 0.75rem;
-  color: var(--text-muted);
+  color: var(--color-tx-muted);
 }
 
 .layer-opacity-value {
@@ -212,7 +212,7 @@
 .layer-setting-label,
 .layer-setting-value {
   font-size: 0.75rem;
-  color: var(--text-muted);
+  color: var(--color-tx-muted);
 }
 
 .layer-setting-value {

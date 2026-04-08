@@ -67,7 +67,7 @@
   overflow: auto;
   border-radius: 12px;
   background: rgba(0, 0, 0, 0.08);
-  color: var(--text-primary);
+  color: var(--color-tx-normal);
   font-family: 'Courier New', monospace;
   font-size: 0.82rem;
   line-height: 1.45;
