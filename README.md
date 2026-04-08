@@ -2,6 +2,6 @@
 
 Forked from [ImageMasker (with masking)](https://github.com/ImageMasker/ImageMasker.github.io)
 
-Strips things down to things I actually use
+Strips things down to things I actually use. Remade the UI to be more familiar.
 
-Remade the UI to be more familiar.
+Try it at sanalog.net/iruda/mimage
