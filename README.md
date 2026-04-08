@@ -4,4 +4,4 @@ Forked from [ImageMasker (with masking)](https://github.com/ImageMasker/ImageMas
 
 Strips things down to things I actually use. Remade the UI to be more familiar.
 
-Try it at sanalog.net/iruda/mimage
+Try it at [sanalog.net/iruda/mimage](https://sanalog.net/iruda/mimage)
